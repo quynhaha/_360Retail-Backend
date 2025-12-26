@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace _360Retail.Services.CRM.Infrastructure.Persistence.Entities;
+namespace _360Retail.Services.CRM.Domain.Entities;
 
 public partial class Customer
 {

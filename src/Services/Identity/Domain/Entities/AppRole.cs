@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace _360Retail.Services.Identity.Infrastructure.Persistence.Entities;
+namespace _360Retail.Services.Identity.Domain.Entities;
 
 public partial class AppRole
 {

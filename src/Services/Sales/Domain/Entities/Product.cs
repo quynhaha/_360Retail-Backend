@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-
-namespace _360Retail.Services.Sales.Infrastructure.Persistence.Entities;
+namespace _360Retail.Services.Sales.Domain.Entities;
 
 public partial class Product
 {

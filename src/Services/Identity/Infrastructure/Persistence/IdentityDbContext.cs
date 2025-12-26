@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using _360Retail.Services.Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace _360Retail.Services.Identity.Infrastructure.Persistence.Entities;
+namespace _360Retail.Services.Identity.Infrastructure.Persistence;
 
 public partial class IdentityDbContext : DbContext
 {
@@ -19,9 +20,6 @@ public partial class IdentityDbContext : DbContext
 
     public virtual DbSet<AppUser> AppUsers { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseNpgsql("Host=localhost;Database=360Retail;Username=postgres;Password=12345");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
