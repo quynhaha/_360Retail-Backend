@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36603.0 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{9579D4B6-00DE-4D9D-A5F9-EEC21D338E14}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "HR", "HR", "{4E616F97-0ECC-4ECB-9DBA-38D48750CBB4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "360Retail.Services.HR.Domain", "360Retail.Services.HR.Domain\360Retail.Services.HR.Domain.csproj", "{9FEE4C56-4C94-4D13-968B-9AC0AD0DEAFA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "360Retail.Services.HR.Application", "360Retail.Services.HR.Application\360Retail.Services.HR.Application.csproj", "{B7768A1C-69C4-4F20-83E2-E23CC843D5AF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "360Retail.Services.HR.Infrastructure", "360Retail.Services.HR.Infrastructure\360Retail.Services.HR.Infrastructure.csproj", "{490B0368-3DD6-44E4-BDBD-E2F6C97A2B1D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "360Retail.Services.HR.API", "360Retail.Services.HR.API\360Retail.Services.HR.API.csproj", "{B9C050BA-F38D-4DEA-8FE9-0AA7CD539730}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9FEE4C56-4C94-4D13-968B-9AC0AD0DEAFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9FEE4C56-4C94-4D13-968B-9AC0AD0DEAFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9FEE4C56-4C94-4D13-968B-9AC0AD0DEAFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9FEE4C56-4C94-4D13-968B-9AC0AD0DEAFA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B7768A1C-69C4-4F20-83E2-E23CC843D5AF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B7768A1C-69C4-4F20-83E2-E23CC843D5AF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B7768A1C-69C4-4F20-83E2-E23CC843D5AF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B7768A1C-69C4-4F20-83E2-E23CC843D5AF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{490B0368-3DD6-44E4-BDBD-E2F6C97A2B1D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{490B0368-3DD6-44E4-BDBD-E2F6C97A2B1D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{490B0368-3DD6-44E4-BDBD-E2F6C97A2B1D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{490B0368-3DD6-44E4-BDBD-E2F6C97A2B1D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9C050BA-F38D-4DEA-8FE9-0AA7CD539730}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9C050BA-F38D-4DEA-8FE9-0AA7CD539730}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9C050BA-F38D-4DEA-8FE9-0AA7CD539730}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9C050BA-F38D-4DEA-8FE9-0AA7CD539730}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{9579D4B6-00DE-4D9D-A5F9-EEC21D338E14} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{4E616F97-0ECC-4ECB-9DBA-38D48750CBB4} = {9579D4B6-00DE-4D9D-A5F9-EEC21D338E14}
+		{9FEE4C56-4C94-4D13-968B-9AC0AD0DEAFA} = {4E616F97-0ECC-4ECB-9DBA-38D48750CBB4}
+		{B7768A1C-69C4-4F20-83E2-E23CC843D5AF} = {4E616F97-0ECC-4ECB-9DBA-38D48750CBB4}
+		{490B0368-3DD6-44E4-BDBD-E2F6C97A2B1D} = {4E616F97-0ECC-4ECB-9DBA-38D48750CBB4}
+		{B9C050BA-F38D-4DEA-8FE9-0AA7CD539730} = {4E616F97-0ECC-4ECB-9DBA-38D48750CBB4}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D5714F06-1953-4272-9DF8-6810D98F5B6F}
+	EndGlobalSection
+EndGlobal
