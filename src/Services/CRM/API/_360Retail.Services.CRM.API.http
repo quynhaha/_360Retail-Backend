@@ -1,0 +1,6 @@
+@_360Retail.Services.CRM.API_HostAddress = http://localhost:5169
+
+GET {{_360Retail.Services.CRM.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
