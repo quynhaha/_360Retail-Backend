@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace _360Retail.Services.Identity.Domain.Entities;
 
@@ -10,6 +9,4 @@ public partial class AppRole
     public string RoleName { get; set; } = null!;
 
     public string? Description { get; set; }
-
-    public virtual ICollection<AppUser> Users { get; set; } = new List<AppUser>();
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using _360Retail.Services.Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,91 +6,126 @@ namespace _360Retail.Services.Identity.Infrastructure.Persistence;
 
 public partial class IdentityDbContext : DbContext
 {
-    public IdentityDbContext()
-    {
-    }
-
     public IdentityDbContext(DbContextOptions<IdentityDbContext> options)
-        : base(options)
-    {
-    }
+        : base(options) { }
 
-    public virtual DbSet<AppRole> AppRoles { get; set; }
-
-    public virtual DbSet<AppUser> AppUsers { get; set; }
-
+    public DbSet<AppUser> AppUsers => Set<AppUser>();
+    public DbSet<AppRole> AppRoles => Set<AppRole>();
+    public DbSet<UserStoreAccess> UserStoreAccess => Set<UserStoreAccess>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("uuid-ossp");
 
+        // ----------------- APP ROLE -----------------
         modelBuilder.Entity<AppRole>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("app_roles_pkey");
-
             entity.ToTable("app_roles", "identity");
+            entity.HasKey(e => e.Id);
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("uuid_generate_v4()")
-                .HasColumnName("id");
-            entity.Property(e => e.Description)
-                .HasMaxLength(255)
-                .HasColumnName("description");
+                .HasColumnName("id")
+                .HasDefaultValueSql("uuid_generate_v4()");
+
             entity.Property(e => e.RoleName)
-                .HasMaxLength(50)
-                .HasColumnName("role_name");
+                .HasColumnName("role_name")
+                .HasMaxLength(50);
+
+            entity.Property(e => e.Description)
+                .HasColumnName("description")
+                .HasMaxLength(255);
         });
 
+        // ----------------- APP USER -----------------
         modelBuilder.Entity<AppUser>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("app_users_pkey");
-
             entity.ToTable("app_users", "identity");
+            entity.HasKey(e => e.Id);
 
             entity.Property(e => e.Id)
-                .HasDefaultValueSql("uuid_generate_v4()")
-                .HasColumnName("id");
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("created_at");
-            entity.Property(e => e.Email)
-                .HasMaxLength(100)
-                .HasColumnName("email");
-            entity.Property(e => e.IsActive)
-                .HasDefaultValue(true)
-                .HasColumnName("is_active");
-            entity.Property(e => e.PasswordHash).HasColumnName("password_hash");
-            entity.Property(e => e.PhoneNumber)
-                .HasMaxLength(20)
-                .HasColumnName("phone_number");
-            entity.Property(e => e.StoreId).HasColumnName("store_id");
-            entity.Property(e => e.UserName)
-                .HasMaxLength(100)
-                .HasColumnName("user_name");
+                .HasColumnName("id")
+                .HasDefaultValueSql("uuid_generate_v4()");
 
-            entity.HasMany(d => d.Roles).WithMany(p => p.Users)
-                .UsingEntity<Dictionary<string, object>>(
-                    "UserRole",
-                    r => r.HasOne<AppRole>().WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("user_roles_role_id_fkey"),
-                    l => l.HasOne<AppUser>().WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("user_roles_user_id_fkey"),
-                    j =>
-                    {
-                        j.HasKey("UserId", "RoleId").HasName("user_roles_pkey");
-                        j.ToTable("user_roles", "identity");
-                        j.IndexerProperty<Guid>("UserId").HasColumnName("user_id");
-                        j.IndexerProperty<Guid>("RoleId").HasColumnName("role_id");
-                    });
+            entity.Property(e => e.UserName)
+                .HasColumnName("user_name")
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Email)
+                .HasColumnName("email")
+                .HasMaxLength(100);
+
+            entity.Property(e => e.PasswordHash)
+                .HasColumnName("password_hash")
+                .HasMaxLength(255);
+
+            entity.Property(e => e.PhoneNumber)
+                .HasColumnName("phone_number")
+                .HasMaxLength(20);
+
+            entity.Property(e => e.Status)
+                .HasColumnName("status")
+                .HasMaxLength(30)
+                .HasDefaultValue("Pending");
+
+            entity.Property(e => e.IsActivated)
+                .HasColumnName("is_activated")
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.ActivationToken)
+                .HasColumnName("activation_token")
+                .HasMaxLength(100);
+
+            entity.Property(e => e.ActivationTokenExpiredAt)
+                .HasColumnName("activation_token_expired_at");
+
+            entity.Property(e => e.StoreId)
+                .HasColumnName("store_id");
+
+            entity.Property(e => e.CreatedAt)
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
-        OnModelCreatingPartial(modelBuilder);
-    }
+        // ----------------- USER ROLE (SYSTEM) -----------------
+        modelBuilder.Entity<AppUser>()
+            .HasMany(u => u.Roles)
+            .WithMany()
+            .UsingEntity<Dictionary<string, object>>(
+                "user_roles",
+                r => r.HasOne<AppRole>().WithMany().HasForeignKey("role_id"),
+                l => l.HasOne<AppUser>().WithMany().HasForeignKey("user_id"),
+                j =>
+                {
+                    j.ToTable("user_roles", "identity");
+                    j.HasKey("user_id", "role_id");
+                });
 
-    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+        // ----------------- USER STORE ACCESS -----------------
+        modelBuilder.Entity<UserStoreAccess>(entity =>
+        {
+            entity.ToTable("user_store_access", "identity");
+            entity.HasKey(e => new { e.UserId, e.StoreId });
+
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.StoreId).HasColumnName("store_id");
+
+            entity.Property(e => e.RoleInStore)
+                .HasColumnName("role_in_store")
+                .HasMaxLength(50)
+                .HasDefaultValue("Staff");
+
+            entity.Property(e => e.IsDefault)
+                .HasColumnName("is_default")
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.AssignedAt)
+                .HasColumnName("assigned_at")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.User)
+                .WithMany(u => u.StoreAccesses)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
 }
