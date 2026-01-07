@@ -1,31 +1,44 @@
-﻿using _360Retail.Services.Identity.Application.Interfaces;
+﻿using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+
+using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Email;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
 using _360Retail.Services.Identity.Infrastructure.Services;
+using _360Retail.Services.Identity.Infrastructure.Services.SuperAdmin;
 using _360Retail.Services.Saas.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using System.Text;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
+#region ===== HTTP & EMAIL =====
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
+#endregion
 
-// 1. Đăng ký DB Context (Đã làm rồi)
+#region ===== DATABASE =====
 builder.Services.AddDbContext<IdentityDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddDbContext<SaasDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-// 2. Đăng ký Service Auth
+#endregion
+
+#region ===== APPLICATION SERVICES =====
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// 3. Cấu hình xác thực JWT
+builder.Services.AddScoped<ISuperAdminUserService, SuperAdminUserService>();
+
+#endregion
+
+#region ===== JWT AUTHENTICATION =====
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
@@ -36,7 +49,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false; 
+    options.RequireHttpsMetadata = false;
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -45,27 +58,31 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuer = true,
         ValidateAudience = true,
         ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"]
+        ValidAudience = jwtSettings["Audience"],
+        ClockSkew = TimeSpan.Zero
     };
 });
+#endregion
 
-// Cấu hình Swagger để hỗ trợ nhập Token
+#region ===== SWAGGER =====
 builder.Services.AddSwaggerGen(option =>
 {
-    option.SwaggerDoc("v1", new OpenApiInfo { Title = "Identity API", Version = "v1" });
+    option.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "360Retail Identity API",
+        Version = "v1"
+    });
 
-    // 1. Định nghĩa Security Scheme (Kiểu xác thực)
     option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         In = ParameterLocation.Header,
-        Description = "Please enter the Token in the box below (No need for the word Bearer, just paste the Token string)",
+        Description = "Paste JWT token here (no need to type Bearer)",
         Name = "Authorization",
         Type = SecuritySchemeType.Http,
-        BearerFormat = "JWT",
-        Scheme = "Bearer"
+        Scheme = "Bearer",
+        BearerFormat = "JWT"
     });
 
-    // 2. Yêu cầu bảo mật (Áp dụng cho toàn bộ API)
     option.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -73,24 +90,22 @@ builder.Services.AddSwaggerGen(option =>
             {
                 Reference = new OpenApiReference
                 {
-                    Type=ReferenceType.SecurityScheme,
-                    Id="Bearer"
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
                 }
             },
-            new string[]{}
+            Array.Empty<string>()
         }
     });
 });
+#endregion
 
 builder.Services.AddControllers();
-
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+#region ===== MIDDLEWARE =====
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -98,34 +113,11 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseAuthentication(); 
+
+app.UseAuthentication();
 app.UseAuthorization();
 
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
 app.MapControllers();
+#endregion
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
