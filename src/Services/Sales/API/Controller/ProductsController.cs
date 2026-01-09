@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace _360Retail.Services.Sales.API.Controllers
 {
-    [Authorize]
+  [Authorize(Roles = "StoreOwner,Manager,Staff")]
     public class ProductsController : BaseApiController
     {
         private readonly IProductService _productService;
@@ -18,16 +18,22 @@ namespace _360Retail.Services.Sales.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetList([FromQuery] string? keyword, [FromQuery] Guid? categoryId)
+        public async Task<IActionResult> GetList(
+            [FromQuery] string? keyword, 
+            [FromQuery] Guid? categoryId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] bool includeInactive = false)
         {
             var storeId = GetCurrentStoreId();
             if (storeId == Guid.Empty)
                 return BadResult("User has no store yet");
 
-            var data = await _productService.GetAllAsync(storeId, keyword, categoryId);
+            var data = await _productService.GetAllAsync(storeId, keyword, categoryId, page, pageSize, includeInactive);
             return OkResult(data);
         }
 
+        [Authorize(Roles = "StoreOwner,Manager")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -42,6 +48,7 @@ namespace _360Retail.Services.Sales.API.Controllers
             catch (Exception ex) { return BadResult(ex.Message); }
         }
 
+        [Authorize(Roles = "StoreOwner,Manager")]
         [HttpPost]
         [Consumes("multipart/form-data")] 
         public async Task<IActionResult> Create([FromForm] CreateProductDto request) //  [FromForm]
@@ -61,6 +68,7 @@ namespace _360Retail.Services.Sales.API.Controllers
             catch (Exception ex) { return BadResult(ex.Message); }
         }
 
+        [Authorize(Roles = "StoreOwner,Manager")]
         [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(Guid id, [FromForm] UpdateProductDto request)
@@ -79,6 +87,7 @@ namespace _360Retail.Services.Sales.API.Controllers
             catch (Exception ex) { return BadResult(ex.Message); }
         }
 
+        [Authorize(Roles = "StoreOwner,Manager")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

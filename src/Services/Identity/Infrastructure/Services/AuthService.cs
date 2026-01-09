@@ -117,7 +117,6 @@ public class AuthService : IAuthService
         );
     }
 
-    // ACTIVATE ACCOUNT
     public async Task ActivateAccountAsync(ActivateAccountDto dto)
     {
         var user = await _db.AppUsers.FirstOrDefaultAsync(u =>
@@ -133,6 +132,34 @@ public class AuthService : IAuthService
         user.Status = "Active";
         user.ActivationToken = null;
         user.ActivationTokenExpiredAt = null;
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task AssignStoreAsync(Guid userId, AssignStoreDto dto)
+    {
+        // 1. Check if access already exists
+        var exists = await _db.UserStoreAccess.AnyAsync(x => x.UserId == userId && x.StoreId == dto.StoreId);
+        if (exists) return; // Already linked
+
+        // 2. Add New Access
+        _db.UserStoreAccess.Add(new UserStoreAccess
+        {
+            UserId = userId,
+            StoreId = dto.StoreId,
+            RoleInStore = dto.RoleInStore,
+            IsDefault = dto.IsDefault,
+            AssignedAt = DateTime.UtcNow
+        });
+
+        // 3. If default, unset other defaults
+        if (dto.IsDefault)
+        {
+             var others = await _db.UserStoreAccess
+                .Where(x => x.UserId == userId && x.StoreId != dto.StoreId)
+                .ToListAsync();
+             foreach (var item in others) item.IsDefault = false;
+        }
 
         await _db.SaveChangesAsync();
     }

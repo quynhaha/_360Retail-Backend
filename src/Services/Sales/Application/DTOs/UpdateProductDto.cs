@@ -12,7 +12,7 @@ namespace _360Retail.Services.Sales.Application.DTOs
     {
         [Required]
         public Guid Id { get; set; }
-
+         public bool IsActive { get; set; } = true;
         // Ghi đè (new) để cho phép null (nếu user không muốn thay ảnh thì không gửi trường này)
         public new IFormFile? ImageFile { get; set; }
     }

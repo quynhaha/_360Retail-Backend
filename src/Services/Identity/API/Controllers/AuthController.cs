@@ -62,6 +62,18 @@ namespace _360Retail.Services.Identity.API.Controllers
             return Ok(new { message = "Account activated successfully" });
         }
 
+        // ASSIGN STORE (INTERNAL/DEV)
+        [Authorize]
+        [HttpPost("assign-store")]
+        public async Task<IActionResult> AssignStore([FromBody] AssignStoreDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userIdClaim == null) return Unauthorized();
+
+            await _authService.AssignStoreAsync(Guid.Parse(userIdClaim), dto);
+            return Ok(new { message = "Store assigned successfully" });
+        }
+
         // DEBUG / TEST JWT (SWAGGER)
         [Authorize]
         [HttpGet("me")]

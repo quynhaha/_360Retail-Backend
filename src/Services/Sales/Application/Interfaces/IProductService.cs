@@ -9,7 +9,13 @@ namespace _360Retail.Services.Sales.Application.Interfaces
 {
     public interface IProductService
     {
-        Task<List<ProductDto>> GetAllAsync(Guid storeId, string? keyword, Guid? categoryId);
+        Task<PagedResult<ProductDto>> GetAllAsync(
+    Guid storeId, 
+   string? keyword, 
+   Guid? categoryId,
+   int page = 1,
+int pageSize = 20,
+   bool includeInactive = false);
         Task<ProductDto> GetByIdAsync(Guid id, Guid storeId);
         Task<Guid> CreateAsync(CreateProductDto request, Guid storeId);
         Task UpdateAsync(UpdateProductDto request, Guid storeId);

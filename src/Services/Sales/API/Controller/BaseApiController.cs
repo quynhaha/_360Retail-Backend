@@ -31,7 +31,7 @@ namespace _360Retail.Services.Sales.API.Controllers
 
         protected Guid GetCurrentStoreId()
         {
-            var storeId = User.FindFirst("StoreId")?.Value;
+            var storeId = User.FindFirst("store_id")?.Value;
             return storeId != null ? Guid.Parse(storeId) : Guid.Empty;
         }
     }

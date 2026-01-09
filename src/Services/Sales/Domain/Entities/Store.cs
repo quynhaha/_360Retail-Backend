@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace _360Retail.Services.Sales.Domain.Entities;
 
-[Table("stores", Schema = "sales")]
+[Table("stores", Schema = "saas")]
 public partial class Store
 {
     [Key]

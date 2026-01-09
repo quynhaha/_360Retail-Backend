@@ -21,8 +21,6 @@ namespace _360Retail.Services.Sales.Application.DTOs
         [Required(ErrorMessage = "Please select a category")]
         public Guid CategoryId { get; set; }
 
-        [Required(ErrorMessage = "Please select a store")]
-
         public IFormFile? ImageFile { get; set; }
     }
 }

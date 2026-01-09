@@ -59,7 +59,7 @@ builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<IStoreService, StoreService>();
+
 
 builder.Services.AddAuthentication(options =>
 {

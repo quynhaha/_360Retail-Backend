@@ -39,11 +39,7 @@ namespace _360Retail.Services.Sales.Application.Mappings
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true));
 
-            // --- Store Mappings ---
-            CreateMap<Store, StoreDto>();
-            CreateMap<CreateStoreDto, Store>()
-                .ForMember(dest => dest.Id, opt => opt.Ignore())
-                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow));
+
         }
     }
 }

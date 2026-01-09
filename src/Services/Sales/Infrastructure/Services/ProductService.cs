@@ -55,26 +55,36 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
 
 
 
-        public async Task<List<ProductDto>> GetAllAsync(Guid storeId, string? keyword, Guid? categoryId)
-        {
-            var query = _context.Products
-                .Where(p => p.StoreId == storeId)
-                .Include(p => p.Category)
-                .AsQueryable();
+      public async Task<PagedResult<ProductDto>> GetAllAsync(
+    Guid storeId, 
+    string? keyword, 
+    Guid? categoryId,
+    int page = 1,
+    int pageSize = 20,
+    bool includeInactive = false)
+ {
+     var query = _context.Products
+         .Where(p => p.StoreId == storeId)
+        .Where(p => includeInactive || p.IsActive)  // Filter inactive by default
+         .Include(p => p.Category)
+         .AsQueryable();
+     // ... filtering logic ...
+    
+    var totalCount = await query.CountAsync();
+   var items = await query
+       .OrderByDescending(p => p.CreatedAt)
+      .Skip((page - 1) * pageSize)
+      .Take(pageSize)
+       .ToListAsync();
 
-            if (!string.IsNullOrEmpty(keyword))
-                query = query.Where(p =>
-                    p.ProductName.ToLower().Contains(keyword.ToLower()));
-
-            if (categoryId.HasValue)
-                query = query.Where(p => p.CategoryId == categoryId);
-
-            var list = await query
-                .OrderByDescending(p => p.CreatedAt)
-                .ToListAsync();
-
-            return _mapper.Map<List<ProductDto>>(list);
-        }
+    return new PagedResult<ProductDto>
+    {
+       Items = _mapper.Map<List<ProductDto>>(items),
+        TotalCount = totalCount,
+        PageNumber = page,
+        PageSize = pageSize
+    };
+ }
 
         public async Task<ProductDto> GetByIdAsync(Guid id, Guid storeId)
         {
@@ -103,9 +113,13 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                 throw new Exception("Category does not belong to this store");
 
             product.ProductName = request.ProductName;
-            product.Price = request.Price;
-            product.Description = request.Description;
-            product.CategoryId = request.CategoryId;
+product.BarCode = request.BarCode;
+ product.Price = request.Price;
+product.CostPrice = request.CostPrice;
+product.StockQuantity = request.StockQuantity;
+ product.Description = request.Description;
+ product.CategoryId = request.CategoryId;
+product.IsActive = request.IsActive;
 
             if (request.ImageFile != null)
             {
@@ -127,9 +141,10 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
 
             if (product == null)
                 throw new Exception("Product not found");
-            if (!string.IsNullOrEmpty(product.ImageUrl))
-                await _storageService.DeleteFileAsync(product.ImageUrl);
-            _context.Products.Remove(product);
+            // if (!string.IsNullOrEmpty(product.ImageUrl))
+            //     await _storageService.DeleteFileAsync(product.ImageUrl);
+            // _context.Products.Remove(product);
+            product.IsActive = false;  // Soft delete
             await _context.SaveChangesAsync();
         }
     }

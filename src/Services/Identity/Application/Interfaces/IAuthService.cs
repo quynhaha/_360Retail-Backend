@@ -11,4 +11,6 @@ public interface IAuthService
     Task InviteStaffAsync(Guid ownerUserId, Guid storeId, InviteStaffDto dto);
 
     Task ActivateAccountAsync(ActivateAccountDto dto);
+
+    Task AssignStoreAsync(Guid userId, AssignStoreDto dto);
 }
