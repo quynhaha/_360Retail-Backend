@@ -95,6 +95,9 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    
+    // Auto redirect / to /swagger
+    app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 }
 
 app.UseHttpsRedirection();
