@@ -13,4 +13,6 @@ public interface IAuthService
     Task ActivateAccountAsync(ActivateAccountDto dto);
 
     Task AssignStoreAsync(Guid userId, AssignStoreDto dto);
+
+    Task<AuthResultDto> RefreshAccessAsync(Guid userId, Guid? storeId);
 }

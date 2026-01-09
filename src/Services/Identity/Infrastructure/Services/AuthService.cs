@@ -164,6 +164,38 @@ public class AuthService : IAuthService
         await _db.SaveChangesAsync();
     }
 
+    // REFRESH ACCESS (NEW)
+    public async Task<AuthResultDto> RefreshAccessAsync(Guid userId, Guid? storeId)
+    {
+        var user = await _db.AppUsers
+            .Include(u => u.StoreAccesses)
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Id == userId && u.IsActivated == true);
+
+        if (user == null)
+            throw new Exception("User not found or inactive");
+
+        // If user wants to switch store
+        if (storeId.HasValue)
+        {
+            // Verify access
+            var targetAccess = user.StoreAccesses.FirstOrDefault(x => x.StoreId == storeId.Value);
+            if (targetAccess == null)
+                throw new Exception("Access denied to this store");
+
+            // Update IsDefault in DB for next logins
+            foreach (var access in user.StoreAccesses) access.IsDefault = false;
+            targetAccess.IsDefault = true;
+            await _db.SaveChangesAsync();
+        }
+
+        // Generate new token
+        var newLinkToken = GenerateJwtToken(user);
+        var expireMinutes = GetJwtExpireMinutes();
+
+        return new AuthResultDto(newLinkToken, DateTime.UtcNow.AddMinutes(expireMinutes));
+    }
+
     // JWT
     private string GenerateJwtToken(AppUser user)
     {
