@@ -21,7 +21,7 @@ public partial class Order
     public string Code { get; set; } = null!;
 
     [Column("employee_id")]
-    public Guid EmployeeId { get; set; }
+    public Guid? EmployeeId { get; set; }
 
     [Column("customer_id")]
     public Guid? CustomerId { get; set; }
@@ -41,6 +41,10 @@ public partial class Order
     [Column("payment_method")]
     [StringLength(50)]
     public string? PaymentMethod { get; set; }
+
+    [Column("payment_status")]
+    [StringLength(50)]
+    public string? PaymentStatus { get; set; }
 
     [Column("created_at", TypeName = "timestamp without time zone")]
     public DateTime? CreatedAt { get; set; }

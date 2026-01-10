@@ -19,6 +19,9 @@ public partial class OrderItem
     [Column("product_id")]
     public Guid ProductId { get; set; }
 
+    [Column("product_variant_id")]
+    public Guid? ProductVariantId { get; set; }
+
     [Column("quantity")]
     public int Quantity { get; set; }
 
@@ -37,4 +40,7 @@ public partial class OrderItem
     [ForeignKey("ProductId")]
     [InverseProperty("OrderItems")]
     public virtual Product Product { get; set; } = null!;
+
+    [ForeignKey("ProductVariantId")]
+    public virtual ProductVariant? ProductVariant { get; set; }
 }

@@ -1,0 +1,14 @@
+**/.dockerignore
+**/.git
+**/.gitignore
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/node_modules
+**/out
+**/dist
+_ReSharper.Caches
+*.sln.dotSettings.user
+*.user
+*.suo

@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace _360Retail.Services.Sales.API.Controllers
 {
-    [Authorize]
     public class ProductsController : BaseApiController
     {
         private readonly IProductService _productService;
@@ -17,31 +16,41 @@ namespace _360Retail.Services.Sales.API.Controllers
             _productService = productService;
         }
 
+        [AllowAnonymous]
         [HttpGet]
-        public async Task<IActionResult> GetList([FromQuery] string? keyword, [FromQuery] Guid? categoryId)
+        public async Task<IActionResult> GetList(
+            [FromQuery] Guid? storeId,
+            [FromQuery] string? keyword, 
+            [FromQuery] Guid? categoryId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] bool includeInactive = false)
         {
-            var storeId = GetCurrentStoreId();
-            if (storeId == Guid.Empty)
-                return BadResult("User has no store yet");
+            var targetStoreId = storeId ?? GetCurrentStoreId();
+            if (targetStoreId == Guid.Empty)
+                return BadResult("Store ID is required");
 
-            var data = await _productService.GetAllAsync(storeId, keyword, categoryId);
+            var data = await _productService.GetAllAsync(targetStoreId, keyword, categoryId, page, pageSize, includeInactive);
             return OkResult(data);
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid id, [FromQuery] Guid? storeId)
         {
             try
             {
-                var storeId = GetCurrentStoreId();
-                if (storeId == Guid.Empty)
-                    return BadResult("User has no store yet");
-                var data = await _productService.GetByIdAsync(id, storeId);
+                var targetStoreId = storeId ?? GetCurrentStoreId();
+                if (targetStoreId == Guid.Empty)
+                    return BadResult("Store ID is required");
+
+                var data = await _productService.GetByIdAsync(id, targetStoreId);
                 return OkResult(data);
             }
             catch (Exception ex) { return BadResult(ex.Message); }
         }
 
+        [Authorize(Roles = "StoreOwner,Manager")]
         [HttpPost]
         [Consumes("multipart/form-data")] 
         public async Task<IActionResult> Create([FromForm] CreateProductDto request) //  [FromForm]
@@ -61,6 +70,7 @@ namespace _360Retail.Services.Sales.API.Controllers
             catch (Exception ex) { return BadResult(ex.Message); }
         }
 
+        [Authorize(Roles = "StoreOwner,Manager")]
         [HttpPut("{id}")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> Update(Guid id, [FromForm] UpdateProductDto request)
@@ -79,6 +89,7 @@ namespace _360Retail.Services.Sales.API.Controllers
             catch (Exception ex) { return BadResult(ex.Message); }
         }
 
+        [Authorize(Roles = "StoreOwner,Manager")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

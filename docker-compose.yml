@@ -1,0 +1,107 @@
+services:
+  postgres:
+    image: postgres:latest
+    container_name: 360retail-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 12345
+      POSTGRES_DB: 360RetailDB
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - 360retail-network
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: 360retail-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@360retail.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - 360retail-network
+
+  identity-api:
+    build:
+      context: .
+      dockerfile: src/Services/Identity/API/Dockerfile
+    container_name: 360retail-identity-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
+    ports:
+      - "5297:80"
+    depends_on:
+      - postgres
+    networks:
+      - 360retail-network
+
+  saas-api:
+    build:
+      context: .
+      dockerfile: src/Services/Saas/API/Dockerfile
+    container_name: 360retail-saas-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__SaasDb=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
+    ports:
+      - "5031:80"
+    depends_on:
+      - postgres
+    networks:
+      - 360retail-network
+
+  sales-api:
+    build:
+      context: .
+      dockerfile: src/Services/Sales/API/Dockerfile
+    container_name: 360retail-sales-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
+    ports:
+      - "5091:80"
+    depends_on:
+      - postgres
+    networks:
+      - 360retail-network
+
+  hr-api:
+    build:
+      context: .
+      dockerfile: src/Services/HR/360Retail.Services.HR.API/Dockerfile
+    container_name: 360retail-hr-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
+    ports:
+      - "5280:80"
+    depends_on:
+      - postgres
+    networks:
+      - 360retail-network
+
+  crm-api:
+    build:
+      context: .
+      dockerfile: src/Services/CRM/API/Dockerfile
+    container_name: 360retail-crm-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "5169:80"
+    networks:
+      - 360retail-network
+
+networks:
+  360retail-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -117,7 +117,6 @@ public class AuthService : IAuthService
         );
     }
 
-    // ACTIVATE ACCOUNT
     public async Task ActivateAccountAsync(ActivateAccountDto dto)
     {
         var user = await _db.AppUsers.FirstOrDefaultAsync(u =>
@@ -135,6 +134,66 @@ public class AuthService : IAuthService
         user.ActivationTokenExpiredAt = null;
 
         await _db.SaveChangesAsync();
+    }
+
+    public async Task AssignStoreAsync(Guid userId, AssignStoreDto dto)
+    {
+        // 1. Check if access already exists
+        var exists = await _db.UserStoreAccess.AnyAsync(x => x.UserId == userId && x.StoreId == dto.StoreId);
+        if (exists) return; // Already linked
+
+        // 2. Add New Access
+        _db.UserStoreAccess.Add(new UserStoreAccess
+        {
+            UserId = userId,
+            StoreId = dto.StoreId,
+            RoleInStore = dto.RoleInStore,
+            IsDefault = dto.IsDefault,
+            AssignedAt = DateTime.UtcNow
+        });
+
+        // 3. If default, unset other defaults
+        if (dto.IsDefault)
+        {
+             var others = await _db.UserStoreAccess
+                .Where(x => x.UserId == userId && x.StoreId != dto.StoreId)
+                .ToListAsync();
+             foreach (var item in others) item.IsDefault = false;
+        }
+
+        await _db.SaveChangesAsync();
+    }
+
+    // REFRESH ACCESS (NEW)
+    public async Task<AuthResultDto> RefreshAccessAsync(Guid userId, Guid? storeId)
+    {
+        var user = await _db.AppUsers
+            .Include(u => u.StoreAccesses)
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Id == userId && u.IsActivated == true);
+
+        if (user == null)
+            throw new Exception("User not found or inactive");
+
+        // If user wants to switch store
+        if (storeId.HasValue)
+        {
+            // Verify access
+            var targetAccess = user.StoreAccesses.FirstOrDefault(x => x.StoreId == storeId.Value);
+            if (targetAccess == null)
+                throw new Exception("Access denied to this store");
+
+            // Update IsDefault in DB for next logins
+            foreach (var access in user.StoreAccesses) access.IsDefault = false;
+            targetAccess.IsDefault = true;
+            await _db.SaveChangesAsync();
+        }
+
+        // Generate new token
+        var newLinkToken = GenerateJwtToken(user);
+        var expireMinutes = GetJwtExpireMinutes();
+
+        return new AuthResultDto(newLinkToken, DateTime.UtcNow.AddMinutes(expireMinutes));
     }
 
     // JWT
@@ -155,6 +214,7 @@ public class AuthService : IAuthService
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim("id", user.Id.ToString()), // For consistency with BaseApiController
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim("status", user.Status)
         };
@@ -172,6 +232,8 @@ public class AuthService : IAuthService
         {
             claims.Add(new Claim("store_id", defaultAccess.StoreId.ToString()));
             claims.Add(new Claim("store_role", defaultAccess.RoleInStore));
+            // Map to standard Role claim so [Authorize(Roles="...")] works
+            claims.Add(new Claim(ClaimTypes.Role, defaultAccess.RoleInStore));
         }
 
         var expireMinutes = GetJwtExpireMinutes();
