@@ -47,6 +47,9 @@ public class OrdersController : BaseApiController
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
+        var storeId = GetCurrentStoreId();
+        if (storeId == Guid.Empty) return BadResult("User has no store context");
+
         var userId = GetCurrentUserId();
         var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray();
 
