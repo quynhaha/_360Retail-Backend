@@ -6,7 +6,7 @@ using _360Retail.Services.Sales.Application.Interfaces;
 
 namespace _360Retail.Services.Sales.API.Controllers;
 
-[Authorize]
+[Authorize(Roles = "StoreOwner,Manager,Staff,Customer")]
 [Route("api/sales/orders")]
 public class OrdersController : BaseApiController
 {
@@ -25,16 +25,11 @@ public class OrdersController : BaseApiController
         var storeId = GetCurrentStoreId();
         if (storeId == Guid.Empty) return BadResult("User has no store context");
 
-        // Try standard claim
-        var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        // Fallback to custom claim
-        if (string.IsNullOrEmpty(userIdStr)) userIdStr = User.FindFirst("id")?.Value;
-
-        if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
+        var userId = GetCurrentUserId();
+        if (userId == Guid.Empty) return Unauthorized();
         
         try 
         {
-            var userId = Guid.Parse(userIdStr);
             var orderId = await _orderService.CreateAsync(dto, storeId, userId);
             return OkResult(orderId, "Order created successfully");
         }
@@ -52,11 +47,11 @@ public class OrdersController : BaseApiController
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var storeId = GetCurrentStoreId();
-        if (storeId == Guid.Empty) return BadResult("User has no store context");
+        var userId = GetCurrentUserId();
+        var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray();
 
         var result = await _orderService.GetListAsync(
-            storeId, status, fromDate, toDate, page, pageSize);
+            storeId, userId, roles, status, fromDate, toDate, page, pageSize);
             
         return OkResult(result);
     }
@@ -67,7 +62,10 @@ public class OrdersController : BaseApiController
         var storeId = GetCurrentStoreId();
         if (storeId == Guid.Empty) return BadResult("User has no store context");
 
-        var order = await _orderService.GetByIdAsync(id, storeId);
+        var userId = GetCurrentUserId();
+        var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray();
+
+        var order = await _orderService.GetByIdAsync(id, storeId, userId, roles);
         if (order == null) return NotFound();
         
         return OkResult(order);

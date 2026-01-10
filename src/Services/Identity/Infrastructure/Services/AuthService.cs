@@ -214,6 +214,7 @@ public class AuthService : IAuthService
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim("id", user.Id.ToString()), // For consistency with BaseApiController
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim("status", user.Status)
         };
@@ -231,6 +232,8 @@ public class AuthService : IAuthService
         {
             claims.Add(new Claim("store_id", defaultAccess.StoreId.ToString()));
             claims.Add(new Claim("store_role", defaultAccess.RoleInStore));
+            // Map to standard Role claim so [Authorize(Roles="...")] works
+            claims.Add(new Claim(ClaimTypes.Role, defaultAccess.RoleInStore));
         }
 
         var expireMinutes = GetJwtExpireMinutes();

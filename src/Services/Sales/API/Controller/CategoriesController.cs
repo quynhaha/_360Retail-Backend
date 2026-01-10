@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace _360Retail.Services.Sales.API.Controllers
 {
-    [Authorize]
     public class CategoriesController : BaseApiController // Kế thừa Base
     {
         private readonly ICategoryService _categoryService;
@@ -16,17 +15,19 @@ namespace _360Retail.Services.Sales.API.Controllers
             _categoryService = categoryService;
         }
 
+        [AllowAnonymous]
         [HttpGet]
-        public async Task<IActionResult> GetList()
+        public async Task<IActionResult> GetList([FromQuery] Guid? storeId)
         {
-            var storeId = GetCurrentStoreId();
-            if (storeId == Guid.Empty)
-                return BadResult("User has no store yet");
+            var targetStoreId = storeId ?? GetCurrentStoreId();
+            if (targetStoreId == Guid.Empty)
+                return BadResult("Store ID is required");
 
-            var data = await _categoryService.GetAllAsync(storeId);
+            var data = await _categoryService.GetAllAsync(targetStoreId);
             return OkResult(data);
         }
 
+        [Authorize(Roles = "StoreOwner,Manager")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateCategoryDto request)
         {
@@ -46,6 +47,7 @@ namespace _360Retail.Services.Sales.API.Controllers
             }
         }
 
+        [Authorize(Roles = "StoreOwner,Manager")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, UpdateCategoryDto request)
         {
@@ -62,6 +64,7 @@ namespace _360Retail.Services.Sales.API.Controllers
             catch (Exception ex) { return BadResult(ex.Message); }
         }
 
+        [Authorize(Roles = "StoreOwner,Manager")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {

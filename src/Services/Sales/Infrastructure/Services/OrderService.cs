@@ -19,18 +19,16 @@ public class OrderService : IOrderService
 
     public async Task<Guid> CreateAsync(CreateOrderDto dto, Guid storeId, Guid userId)
     {
-        // 1. Resolve EmployeeId from UserId using Raw SQL
-        // We alias the column as "Id" to match IdWrapper.Id property
+        // 1. Resolve EmployeeId from UserId if available (Staff/POS flow)
         var employeeWrapper = await _db.Database
             .SqlQueryRaw<IdWrapper>(
                 "SELECT id as \"Id\" FROM hr.employees WHERE app_user_id = {0} AND store_id = {1}", 
                 userId, storeId)
             .FirstOrDefaultAsync();
 
-        if (employeeWrapper == null || employeeWrapper.Id == Guid.Empty)
-             throw new Exception("Employee profile not found for this user in this store. Please contact HR.");
-        
-        var employeeId = employeeWrapper.Id;
+        Guid? employeeId = (employeeWrapper != null && employeeWrapper.Id != Guid.Empty) 
+            ? employeeWrapper.Id 
+            : null;
 
         // 2. Validate Products & Stock
         var productIds = dto.Items.Select(x => x.ProductId).Distinct().ToList();
@@ -125,11 +123,25 @@ public class OrderService : IOrderService
         return order.Id;
     }
 
-    public async Task<PagedResult<OrderDto>> GetListAsync(Guid storeId, string? status, DateTime? fromDate, DateTime? toDate, int page, int pageSize)
+    public async Task<PagedResult<OrderDto>> GetListAsync(Guid storeId, Guid userId, string[] userRoles, string? status, DateTime? fromDate, DateTime? toDate, int page, int pageSize)
     {
          var query = _db.Orders
-            .Include(o => o.OrderItems) // Include simple items if needed, or don't include for list to save perf
             .Where(o => o.StoreId == storeId);
+
+         // SECURITY: If user is ONLY a Customer, they should only see their own orders
+         if (userRoles.Contains("Customer") && !userRoles.Any(r => r == "Staff" || r == "Manager" || r == "StoreOwner"))
+         {
+             var customerWrapper = await _db.Database
+                .SqlQueryRaw<IdWrapper>(
+                    "SELECT id as \"Id\" FROM crm.customers WHERE app_user_id = {0} AND store_id = {1}", 
+                    userId, storeId)
+                .FirstOrDefaultAsync();
+
+             if (customerWrapper != null)
+                query = query.Where(o => o.CustomerId == customerWrapper.Id);
+             else
+                query = query.Where(o => false); // No customer profile found, return empty
+         }
 
          if (!string.IsNullOrEmpty(status))
             query = query.Where(o => o.Status == status);
@@ -170,14 +182,31 @@ public class OrderService : IOrderService
          };
     }
     
-    public async Task<OrderDto?> GetByIdAsync(Guid id, Guid storeId)
+    public async Task<OrderDto?> GetByIdAsync(Guid id, Guid storeId, Guid userId, string[] userRoles)
     {
-         var order = await _db.Orders
+         var query = _db.Orders
             .Include(o => o.OrderItems)
             .ThenInclude(oi => oi.Product)
             .Include(o => o.OrderItems)
             .ThenInclude(oi => oi.ProductVariant)
-            .FirstOrDefaultAsync(o => o.Id == id && o.StoreId == storeId);
+            .Where(o => o.Id == id && o.StoreId == storeId);
+
+         // SECURITY: If user is ONLY a Customer, they should only see their own order
+         if (userRoles.Contains("Customer") && !userRoles.Any(r => r == "Staff" || r == "Manager" || r == "StoreOwner"))
+         {
+             var customerWrapper = await _db.Database
+                .SqlQueryRaw<IdWrapper>(
+                    "SELECT id as \"Id\" FROM crm.customers WHERE app_user_id = {0} AND store_id = {1}", 
+                    userId, storeId)
+                .FirstOrDefaultAsync();
+
+             if (customerWrapper != null)
+                query = query.Where(o => o.CustomerId == customerWrapper.Id);
+             else
+                return null; // No profile, no access
+         }
+
+         var order = await query.FirstOrDefaultAsync();
             
          if (order == null) return null;
          

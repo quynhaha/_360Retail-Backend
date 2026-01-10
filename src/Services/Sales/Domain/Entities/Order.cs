@@ -21,7 +21,7 @@ public partial class Order
     public string Code { get; set; } = null!;
 
     [Column("employee_id")]
-    public Guid EmployeeId { get; set; }
+    public Guid? EmployeeId { get; set; }
 
     [Column("customer_id")]
     public Guid? CustomerId { get; set; }

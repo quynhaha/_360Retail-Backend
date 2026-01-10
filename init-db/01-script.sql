@@ -170,6 +170,7 @@ CREATE TABLE IF NOT EXISTS sales.product_variants (
 CREATE TABLE IF NOT EXISTS crm.customers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     store_id UUID NOT NULL REFERENCES saas.stores(id) ON DELETE CASCADE,
+    app_user_id UUID REFERENCES identity.app_users(id) ON DELETE CASCADE,
     full_name VARCHAR(100),
     phone_number VARCHAR(20) NOT NULL,
     total_points INT DEFAULT 0,
@@ -180,7 +181,7 @@ CREATE TABLE IF NOT EXISTS sales.orders (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     store_id UUID NOT NULL REFERENCES saas.stores(id),
     code VARCHAR(50) NOT NULL,
-    employee_id UUID NOT NULL REFERENCES hr.employees(id),
+    employee_id UUID REFERENCES hr.employees(id),
     customer_id UUID REFERENCES crm.customers(id),
     total_amount DECIMAL(18,2) NOT NULL,
     discount_amount DECIMAL(18,2) DEFAULT 0,
@@ -233,7 +234,8 @@ VALUES
 (uuid_generate_v4(), 'SuperAdmin', 'System administrator'),
 (uuid_generate_v4(), 'StoreOwner', 'Store owner'),
 (uuid_generate_v4(), 'Manager', 'Store manager'),
-(uuid_generate_v4(), 'Staff', 'Store staff')
+(uuid_generate_v4(), 'Staff', 'Store staff'),
+(uuid_generate_v4(), 'Customer', 'App customer')
 ON CONFLICT DO NOTHING;
 
 

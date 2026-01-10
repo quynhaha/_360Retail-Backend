@@ -19,6 +19,7 @@ public class StoresController : ControllerBase
     }
 
     // CREATE
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPost]
     public async Task<IActionResult> Create(CreateStoreDto dto)
     {
@@ -30,6 +31,7 @@ public class StoresController : ControllerBase
     }
 
     // READ ALL
+    [Authorize(Roles = "SuperAdmin")]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -37,6 +39,7 @@ public class StoresController : ControllerBase
     }
 
     // READ ONE
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
@@ -45,6 +48,7 @@ public class StoresController : ControllerBase
     }
 
     // UPDATE
+    [Authorize(Roles = "SuperAdmin")]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateStoreDto dto)
     {
@@ -53,6 +57,7 @@ public class StoresController : ControllerBase
     }
 
     // DELETE
+    [Authorize(Roles = "SuperAdmin")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
