@@ -45,4 +45,29 @@ Nếu bạn muốn kết nối trực tiếp vào Database:
 - **Password**: `12345`
 - **Database**: `360RetailDB`
 
+## 6. Cách cập nhật code và dữ liệu mới
+
+Khi team Backend có thay đổi về code hoặc cấu trúc Database, các bạn chỉ cần làm theo các bước sau:
+
+1. **Lấy code mới nhất**:
+   ```bash
+   git pull
+   ```
+
+2. **Rebuild và khởi động lại**:
+   Sử dụng flag `--build` để Docker đóng gói lại code mới:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+### 3. Lưu ý về Database (Kỹ thuật DB First)
+   - Vì dự án sử dụng **DB First**, team Backend sẽ cung cấp các file `.sql` trong thư mục `init-db/`.
+   - Các file này sẽ **tự động chạy** khi Docker khởi tạo Database lần đầu tiên.
+   - Khi Backend thông báo có cập nhật Database (thay đổi file SQL), các bạn chỉ cần chạy:
+     ```bash
+     docker-compose down -v
+     docker-compose up -d --build
+     ```
+     *(Lệnh này sẽ xóa dữ liệu cũ và khởi tạo lại DB mới từ các file SQL mới nhất)*.
+
 Chúc các bạn code vui vẻ! 🚀
