@@ -42,6 +42,10 @@ public partial class Order
     [StringLength(50)]
     public string? PaymentMethod { get; set; }
 
+    [Column("payment_status")]
+    [StringLength(50)]
+    public string? PaymentStatus { get; set; }
+
     [Column("created_at", TypeName = "timestamp without time zone")]
     public DateTime? CreatedAt { get; set; }
 

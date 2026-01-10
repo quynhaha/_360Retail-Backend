@@ -61,4 +61,26 @@ public partial class Product
 
     [InverseProperty("Product")]
     public virtual ICollection<ProductVariant> ProductVariants { get; set; } = new List<ProductVariant>();
+
+    // ========== Computed Properties for Stock Management ==========
+    
+    /// <summary>
+    /// Kiểm tra product có variants không
+    /// </summary>
+    [NotMapped]
+    public bool HasVariants => ProductVariants != null && ProductVariants.Any();
+
+    /// <summary>
+    /// Tổng tồn kho: nếu có variants thì tính từ variants, không thì lấy StockQuantity
+    /// </summary>
+    [NotMapped]
+    public int TotalStock => HasVariants 
+        ? ProductVariants.Sum(v => v.StockQuantity) 
+        : StockQuantity;
+
+    /// <summary>
+    /// Còn hàng không?
+    /// </summary>
+    [NotMapped]
+    public bool IsInStock => TotalStock > 0;
 }

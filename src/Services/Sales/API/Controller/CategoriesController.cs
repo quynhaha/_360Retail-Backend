@@ -19,8 +19,12 @@ namespace _360Retail.Services.Sales.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetList()
         {
-            var data = await _categoryService.GetAllAsync();
-            return OkResult(data); // Tự động gói vào { success: true, data: [...] }
+            var storeId = GetCurrentStoreId();
+            if (storeId == Guid.Empty)
+                return BadResult("User has no store yet");
+
+            var data = await _categoryService.GetAllAsync(storeId);
+            return OkResult(data);
         }
 
         [HttpPost]
@@ -38,7 +42,7 @@ namespace _360Retail.Services.Sales.API.Controllers
             }
             catch (Exception ex)
             {
-                return BadResult(ex.Message); // Tự động gói vào { success: false, message: ... }
+                return BadResult(ex.Message);
             }
         }
 
@@ -48,7 +52,11 @@ namespace _360Retail.Services.Sales.API.Controllers
             if (id != request.Id) return BadResult("ID does not match!");
             try
             {
-                await _categoryService.UpdateAsync(request);
+                var storeId = GetCurrentStoreId();
+                if (storeId == Guid.Empty)
+                    return BadResult("User has no store yet");
+
+                await _categoryService.UpdateAsync(request, storeId);
                 return OkResult(true, "Update successful");
             }
             catch (Exception ex) { return BadResult(ex.Message); }
@@ -59,7 +67,11 @@ namespace _360Retail.Services.Sales.API.Controllers
         {
             try
             {
-                await _categoryService.DeleteAsync(id);
+                var storeId = GetCurrentStoreId();
+                if (storeId == Guid.Empty)
+                    return BadResult("User has no store yet");
+
+                await _categoryService.DeleteAsync(id, storeId);
                 return OkResult(true, "Deletion successful");
             }
             catch (Exception ex) { return BadResult(ex.Message); }

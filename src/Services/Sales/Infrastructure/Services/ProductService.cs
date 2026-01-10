@@ -22,6 +22,20 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
 
         public async Task<Guid> CreateAsync(CreateProductDto request, Guid storeId)
         {
+            // Parse variants từ JSON string
+            var variantDtos = request.GetVariants();
+            
+            // DEBUG: Log số lượng variants nhận được từ request
+            Console.WriteLine($"[DEBUG] CreateAsync - VariantsJson: {request.VariantsJson ?? "(null)"}");
+            Console.WriteLine($"[DEBUG] CreateAsync - Parsed {variantDtos.Count} variants for product: {request.ProductName}");
+            if (variantDtos.Count > 0)
+            {
+                foreach (var v in variantDtos)
+                {
+                    Console.WriteLine($"[DEBUG] Request Variant: SKU={v.Sku}, Size={v.Size}, Color={v.Color}, StockQty={v.StockQuantity}");
+                }
+            }
+
             // 1. Check Category thuộc Store
             var categoryExists = await _context.Categories.AnyAsync(c =>
                 c.Id == request.CategoryId &&
@@ -34,22 +48,53 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                 p.ProductName == request.ProductName);
             if (productExists)
                 throw new Exception("Product already exists in this store");
-            // 3. Map dữ liệu
-            var product = _mapper.Map<Product>(request);
+            
+            // 3. Tạo Product entity
+            var product = new Product
+            {
+                Id = Guid.NewGuid(),
+                StoreId = storeId,
+                ProductName = request.ProductName,
+                BarCode = request.BarCode,
+                Price = request.Price,
+                CostPrice = request.CostPrice,
+                StockQuantity = request.StockQuantity,
+                Description = request.Description,
+                CategoryId = request.CategoryId,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
 
-            // Gán các giá trị hệ thống
-            product.Id = Guid.NewGuid();
-            product.StoreId = storeId;
-            product.IsActive = true;
-            product.CreatedAt = DateTime.UtcNow;
             // 4. Upload ảnh (nếu có)
             if (request.ImageFile != null)
             {
                 product.ImageUrl = await _storageService.SaveFileAsync(request.ImageFile, "products");
             }
-            // 5. Lưu DB
+
+            // 5. Tạo ProductVariants từ parsed DTOs
+            foreach (var vDto in variantDtos)
+            {
+                var variant = new ProductVariant
+                {
+                    Id = Guid.NewGuid(),
+                    ProductId = product.Id,
+                    Sku = vDto.Sku,
+                    Size = vDto.Size,
+                    Color = vDto.Color,
+                    PriceOverride = vDto.PriceOverride,
+                    StockQuantity = vDto.StockQuantity
+                };
+                product.ProductVariants.Add(variant);
+                Console.WriteLine($"[DEBUG] Created Variant: Id={variant.Id}, SKU={variant.Sku}, Size={variant.Size}, Color={variant.Color}");
+            }
+
+            Console.WriteLine($"[DEBUG] Total ProductVariants to save: {product.ProductVariants.Count}");
+
+            // 6. Lưu DB
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
+            
+            Console.WriteLine($"[DEBUG] Product saved successfully with Id: {product.Id}");
             return product.Id;
         }
 
@@ -67,6 +112,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
          .Where(p => p.StoreId == storeId)
         .Where(p => includeInactive || p.IsActive)  // Filter inactive by default
          .Include(p => p.Category)
+         .Include(p => p.ProductVariants)  // Include for TotalStock calculation
          .AsQueryable();
      // ... filtering logic ...
     
@@ -90,6 +136,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
         {
             var product = await _context.Products
                 .Include(p => p.Category)
+                .Include(p => p.ProductVariants)
                 .FirstOrDefaultAsync(p => p.Id == id && p.StoreId == storeId);
             if (product == null)
                 throw new Exception("Product not found");
@@ -128,6 +175,53 @@ product.IsActive = request.IsActive;
 
                 product.ImageUrl = await _storageService.SaveFileAsync(
                     request.ImageFile, "products");
+            }
+
+            // Handle Variants Update
+            var variantDtos = request.GetVariants();
+            if (variantDtos.Count > 0)
+            {
+                var existingVariants = await _context.ProductVariants
+                    .Where(pv => pv.ProductId == product.Id).ToListAsync();
+
+                foreach (var vDto in variantDtos)
+                {
+                    if (vDto.Id == null || vDto.Id == Guid.Empty)
+                    {
+                        // Add New
+                        var newVariant = new ProductVariant
+                        {
+                            Id = Guid.NewGuid(),
+                            ProductId = product.Id,
+                            Sku = vDto.Sku,
+                            Size = vDto.Size,
+                            Color = vDto.Color,
+                            PriceOverride = vDto.PriceOverride,
+                            StockQuantity = vDto.StockQuantity
+                        };
+                        _context.ProductVariants.Add(newVariant);
+                    }
+                    else
+                    {
+                        // Update Existing or Delete
+                        var existing = existingVariants.FirstOrDefault(x => x.Id == vDto.Id);
+                        if (existing != null)
+                        {
+                            if (vDto.IsDeleted) 
+                            {
+                                _context.ProductVariants.Remove(existing);
+                            }
+                            else
+                            {
+                                existing.Sku = vDto.Sku;
+                                existing.Size = vDto.Size;
+                                existing.Color = vDto.Color;
+                                existing.PriceOverride = vDto.PriceOverride;
+                                existing.StockQuantity = vDto.StockQuantity;
+                            }
+                        }
+                    }
+                }
             }
 
             await _context.SaveChangesAsync();

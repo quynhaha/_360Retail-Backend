@@ -75,6 +75,10 @@ public partial class SalesDbContext : DbContext
             entity.HasOne(d => d.Product).WithMany(p => p.OrderItems)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("order_items_product_id_fkey");
+
+            entity.HasOne(d => d.ProductVariant).WithMany()
+                .HasForeignKey(d => d.ProductVariantId)
+                .HasConstraintName("order_items_product_variant_id_fkey");
         });
 
         modelBuilder.Entity<Product>(entity =>
