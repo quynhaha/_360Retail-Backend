@@ -5,7 +5,7 @@ public class OrderDto
     public Guid Id { get; set; }
     public Guid StoreId { get; set; }
     public string Code { get; set; } = null!;
-    public Guid EmployeeId { get; set; }
+    public Guid? EmployeeId { get; set; }
     public Guid? CustomerId { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal? DiscountAmount { get; set; }
