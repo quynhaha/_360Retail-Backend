@@ -18,10 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Saas\Domain\_360Retail.Services.Saas.Domain.csproj" />
-    <ProjectReference Include="..\..\Saas\Infrastructure\_360Retail.Services.Saas.Infrastructure.csproj" />
-    <ProjectReference Include="..\Domain\_360Retail.Services.Identity.Domain.csproj" />
     <ProjectReference Include="..\Application\_360Retail.Services.Identity.Application.csproj" />
+    <ProjectReference Include="..\Domain\_360Retail.Services.Identity.Domain.csproj" />
   </ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />

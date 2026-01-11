@@ -8,11 +8,9 @@ public interface IAuthService
 
     Task RegisterAsync(RegisterUserDto dto);
 
-    Task InviteStaffAsync(Guid ownerUserId, Guid storeId, InviteStaffDto dto);
-
-    Task ActivateAccountAsync(ActivateAccountDto dto);
-
     Task AssignStoreAsync(Guid userId, AssignStoreDto dto);
 
     Task<AuthResultDto> RefreshAccessAsync(Guid userId, Guid? storeId);
+
+    Task ChangePasswordAsync(Guid userId, ChangePasswordRequest dto);
 }

@@ -4,7 +4,7 @@ using System.Text.Json;
 using _360Retail.Services.Identity.Application.Interfaces;
 using Microsoft.Extensions.Configuration;
 
-namespace _360Retail.Services.Identity.Infrastructure.Email;
+namespace _360Retail.Services.Identity.Infrastructure.Services.Email;
 
 public class ResendEmailService : IEmailService
 {
@@ -17,7 +17,7 @@ public class ResendEmailService : IEmailService
         _config = config;
     }
 
-    public async Task SendActivationEmailAsync(string toEmail, string activationLink)
+    public async Task SendTemporaryPasswordEmailAsync(string toEmail, string tempPassword)
     {
         var apiKey = _config["Resend:ApiKey"];
         var fromEmail = _config["Resend:FromEmail"];
@@ -26,13 +26,18 @@ public class ResendEmailService : IEmailService
         {
             from = fromEmail,
             to = new[] { toEmail },
-            subject = "Activate your 360Retail account",
+            subject = "Your 360Retail temporary password",
             html = $@"
                 <h3>Welcome to 360Retail</h3>
-                <p>Please click the link below to activate your account:</p>
-                <a href='{activationLink}'>Activate Account</a>
-                <br/><br/>
-                <small>This link will expire in 48 hours.</small>
+                <p>Your temporary password is:</p>
+                <h2>{tempPassword}</h2>
+                <p>Please login and change your password immediately.</p>
+                <p>
+                    Login here:
+                    <a href='https://360retail.app/login'>https://360retail.app/login</a>
+                </p>
+                <br/>
+                <small>This password can only be used once.</small>
             "
         };
 

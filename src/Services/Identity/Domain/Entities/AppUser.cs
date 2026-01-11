@@ -19,9 +19,7 @@ public partial class AppUser
 
     public bool IsActivated { get; set; } = false;
 
-    public string? ActivationToken { get; set; }
-
-    public DateTime? ActivationTokenExpiredAt { get; set; }
+    public bool MustChangePassword { get; set; } = false;
 
     public Guid? StoreId { get; set; }
 

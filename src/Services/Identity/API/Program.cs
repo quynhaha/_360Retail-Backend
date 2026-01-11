@@ -1,17 +1,19 @@
-﻿using System.Text;
+﻿using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
+using _360Retail.Services.Identity.Domain.Entities;
+using _360Retail.Services.Identity.Infrastructure.Persistence;
+using _360Retail.Services.Identity.Infrastructure.Services;
+using _360Retail.Services.Identity.Infrastructure.Services.Email;
+using _360Retail.Services.Identity.Infrastructure.Services.Invitations;
+using _360Retail.Services.Identity.Infrastructure.Services.SuperAdmin;
+using _360Retail.Services.Identity.Infrastructure.Services.UserStoreAccess;
+using _360Retail.Services.Saas.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-
-using _360Retail.Services.Identity.Application.Interfaces;
-using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
-using _360Retail.Services.Identity.Domain.Entities;
-using _360Retail.Services.Identity.Infrastructure.Email;
-using _360Retail.Services.Identity.Infrastructure.Persistence;
-using _360Retail.Services.Identity.Infrastructure.Services;
-using _360Retail.Services.Identity.Infrastructure.Services.SuperAdmin;
-using _360Retail.Services.Saas.Infrastructure.Persistence;
+using System.Text;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -35,6 +37,10 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddScoped<ISuperAdminUserService, SuperAdminUserService>();
+
+builder.Services.AddScoped<IUserInvitationService, UserInvitationService>();
+builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
+builder.Services.AddScoped<IUserStoreAccessService, UserStoreAccessService>();
 
 #endregion
 

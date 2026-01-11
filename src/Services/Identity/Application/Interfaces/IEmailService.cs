@@ -2,5 +2,5 @@
 
 public interface IEmailService
 {
-    Task SendActivationEmailAsync(string toEmail, string activationLink);
+    Task SendTemporaryPasswordEmailAsync(string toEmail, string tempPassword);
 }

@@ -1,14 +1,15 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.Configuration;
-using _360Retail.Services.Identity.Application.DTOs;
+﻿using _360Retail.Services.Identity.Application.DTOs;
 using _360Retail.Services.Identity.Application.Interfaces;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace _360Retail.Services.Identity.Infrastructure.Services;
 
@@ -17,16 +18,19 @@ public class AuthService : IAuthService
     private readonly IdentityDbContext _db;
     private readonly IConfiguration _config;
     private readonly IEmailService _emailService;
+    private readonly IPasswordHasher<AppUser> _passwordHasher;
 
     public AuthService(
         IdentityDbContext db,
         IConfiguration config,
-        IEmailService emailService
+        IEmailService emailService,
+        IPasswordHasher<AppUser> passwordHasher
     )
     {
         _db = db;
         _config = config;
         _emailService = emailService;
+        _passwordHasher = passwordHasher;
     }
 
     // LOGIN
@@ -41,18 +45,28 @@ public class AuthService : IAuthService
                 u.Status == "Active"
             );
 
-        if (user == null || !VerifyPassword(dto.Password, user.PasswordHash))
+        if (user == null)
+            throw new Exception("Invalid email or password");
+
+        var verifyResult = _passwordHasher.VerifyHashedPassword(
+            user,
+            user.PasswordHash,
+            dto.Password
+        );
+
+        if (verifyResult == PasswordVerificationResult.Failed)
             throw new Exception("Invalid email or password");
 
         var token = GenerateJwtToken(user);
-
         var expireMinutes = GetJwtExpireMinutes();
 
         return new AuthResultDto(
             token,
-            DateTime.UtcNow.AddMinutes(expireMinutes)
+            DateTime.UtcNow.AddMinutes(expireMinutes),
+            user.MustChangePassword
         );
     }
+
 
     // REGISTER (USER ONLY – NO STORE)
     public async Task RegisterAsync(RegisterUserDto dto)
@@ -77,65 +91,6 @@ public class AuthService : IAuthService
         await _db.SaveChangesAsync();
     }
 
-    // INVITE STAFF
-    public async Task InviteStaffAsync(Guid ownerUserId, Guid storeId, InviteStaffDto dto)
-    {
-        if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email))
-            throw new Exception("User already exists");
-
-        var activationToken = Guid.NewGuid().ToString("N");
-
-        var user = new AppUser
-        {
-            Email = dto.Email,
-            UserName = dto.Email,
-            Status = "Pending",
-            IsActivated = false,
-            ActivationToken = activationToken,
-            ActivationTokenExpiredAt = DateTime.UtcNow.AddDays(2)
-        };
-
-        _db.AppUsers.Add(user);
-        await _db.SaveChangesAsync();
-
-        _db.UserStoreAccess.Add(new UserStoreAccess
-        {
-            UserId = user.Id,
-            StoreId = storeId,
-            RoleInStore = dto.RoleInStore,
-            IsDefault = true
-        });
-
-        await _db.SaveChangesAsync();
-
-        var activationLink =
-            $"{_config["Frontend:BaseUrl"]}/activate?token={activationToken}";
-
-        await _emailService.SendActivationEmailAsync(
-            user.Email,
-            activationLink
-        );
-    }
-
-    public async Task ActivateAccountAsync(ActivateAccountDto dto)
-    {
-        var user = await _db.AppUsers.FirstOrDefaultAsync(u =>
-            u.ActivationToken == dto.Token &&
-            u.ActivationTokenExpiredAt > DateTime.UtcNow
-        );
-
-        if (user == null)
-            throw new Exception("Invalid or expired activation token");
-
-        user.PasswordHash = HashPassword(dto.Password);
-        user.IsActivated = true;
-        user.Status = "Active";
-        user.ActivationToken = null;
-        user.ActivationTokenExpiredAt = null;
-
-        await _db.SaveChangesAsync();
-    }
-
     public async Task AssignStoreAsync(Guid userId, AssignStoreDto dto)
     {
         // 1. Check if access already exists
@@ -143,7 +98,7 @@ public class AuthService : IAuthService
         if (exists) return; // Already linked
 
         // 2. Add New Access
-        _db.UserStoreAccess.Add(new UserStoreAccess
+        _db.UserStoreAccess.Add(new _360Retail.Services.Identity.Domain.Entities.UserStoreAccess
         {
             UserId = userId,
             StoreId = dto.StoreId,
@@ -193,7 +148,7 @@ public class AuthService : IAuthService
         var newLinkToken = GenerateJwtToken(user);
         var expireMinutes = GetJwtExpireMinutes();
 
-        return new AuthResultDto(newLinkToken, DateTime.UtcNow.AddMinutes(expireMinutes));
+        return new AuthResultDto(newLinkToken, DateTime.UtcNow.AddMinutes(expireMinutes), user.MustChangePassword);
     }
 
     // JWT
@@ -271,5 +226,44 @@ public class AuthService : IAuthService
     {
         if (string.IsNullOrEmpty(hash)) return false;
         return HashPassword(password) == hash;
+    }
+
+    public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest dto)
+    {
+        var user = await _db.AppUsers
+            .FirstOrDefaultAsync(u => u.Id == userId && u.IsActivated);
+
+        if (user == null)
+            throw new Exception("User not found");
+
+        //Verify current password
+        var verifyResult = _passwordHasher.VerifyHashedPassword(
+            user,
+            user.PasswordHash,
+            dto.CurrentPassword
+        );
+
+        if (verifyResult == PasswordVerificationResult.Failed)
+            throw new Exception("Current password is incorrect");
+
+        //Validate new password
+        if (dto.NewPassword != dto.ConfirmNewPassword)
+            throw new Exception("Password confirmation does not match");
+
+        // (Optional) tránh đổi lại mật khẩu cũ
+        if (_passwordHasher.VerifyHashedPassword(
+                user,
+                user.PasswordHash,
+                dto.NewPassword
+            ) == PasswordVerificationResult.Success)
+        {
+            throw new Exception("New password must be different from old password");
+        }
+
+        //Update password + clear flag
+        user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
+        user.MustChangePassword = false;
+
+        await _db.SaveChangesAsync();
     }
 }

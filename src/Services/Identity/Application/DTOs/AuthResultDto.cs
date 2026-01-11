@@ -2,5 +2,6 @@
 
 public record AuthResultDto(
     string AccessToken,
-    DateTime ExpiresAt
+    DateTime ExpiresAt,
+    bool MustChangePassword
 );
