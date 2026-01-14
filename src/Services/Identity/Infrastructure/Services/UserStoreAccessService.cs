@@ -28,4 +28,18 @@ public class UserStoreAccessService : IUserStoreAccessService
             })
             .ToListAsync();
     }
+    public async Task<bool> HasStoreAccessAsync(
+    Guid userId,
+    Guid storeId,
+    string roleInStore)
+    {
+        return await _db.UserStoreAccess
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.UserId == userId &&
+                x.StoreId == storeId &&
+                x.RoleInStore == roleInStore
+            );
+    }
+
 }

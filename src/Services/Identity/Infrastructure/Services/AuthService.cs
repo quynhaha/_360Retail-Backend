@@ -78,18 +78,22 @@ public class AuthService : IAuthService
         {
             Email = dto.Email,
             UserName = dto.Email,
-            PasswordHash = HashPassword(dto.Password),
             Status = "Active",
-            IsActivated = true
+            IsActivated = true,
+            MustChangePassword = false
         };
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
+
         var ownerRole = await _db.AppRoles
-        .FirstAsync(r => r.RoleName == "StoreOwner");
+            .FirstAsync(r => r.RoleName == "StoreOwner");
 
         user.Roles.Add(ownerRole);
 
         _db.AppUsers.Add(user);
         await _db.SaveChangesAsync();
     }
+
 
     public async Task AssignStoreAsync(Guid userId, AssignStoreDto dto)
     {

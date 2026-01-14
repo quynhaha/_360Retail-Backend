@@ -7,6 +7,7 @@ using _360Retail.Services.Saas.Infrastructure.Persistence;
 using _360Retail.Services.Saas.Application.Interfaces;
 using _360Retail.Services.Saas.Infrastructure.Services;
 using Microsoft.OpenApi.Models;
+using _360Retail.Services.Saas.Infrastructure.HttpClients;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,6 +67,11 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
 
 // DI
 builder.Services.AddScoped<IStoreService, StoreService>();
+// HTTP Client -> Identity Service
+builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7116");
+});
 
 // Authentication (JWT)
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
