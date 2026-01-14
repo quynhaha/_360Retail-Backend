@@ -27,4 +27,23 @@ public class UserStoresController : ControllerBase
         var stores = await _userStoreAccessService.GetMyStoresAsync(Guid.Parse(userId));
         return Ok(stores);
     }
+
+    [Authorize]
+    [HttpGet("has-store-access")]
+    public async Task<IActionResult> HasStoreAccess(
+    Guid storeId,
+    string role)
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdStr))
+            return Unauthorized();
+
+        if (!Guid.TryParse(userIdStr, out var userId))
+            return Unauthorized();
+
+        var hasAccess = await _userStoreAccessService
+            .HasStoreAccessAsync(userId, storeId, role);
+
+        return Ok(hasAccess);
+    }
 }
