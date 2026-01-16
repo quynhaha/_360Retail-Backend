@@ -70,4 +70,63 @@ Khi team Backend có thay đổi về code hoặc cấu trúc Database, các b�
      ```
      *(Lệnh này sẽ xóa dữ liệu cũ và khởi tạo lại DB mới từ các file SQL mới nhất)*.
 
+## 7. Truy cập pgAdmin để xem dữ liệu
+
+Sau khi Docker đã chạy, các bạn có thể xem và quản lý dữ liệu trong database thông qua **pgAdmin**:
+
+### Bước 1: Truy cập pgAdmin
+Mở trình duyệt và vào: **http://localhost:5050**
+
+### Bước 2: Đăng nhập
+| Field | Value |
+|-------|-------|
+| Email | `admin@360retail.com` |
+| Password | `admin` |
+
+### Bước 3: Kết nối Database
+1. Click chuột phải vào **Servers** → **Register** → **Server...**
+2. Tab **General**: Đặt tên bất kỳ (VD: `360RetailDB`)
+3. Tab **Connection**:
+
+| Field | Value |
+|-------|-------|
+| Host name/address | `360retail-db` |
+| Port | `5432` |
+| Maintenance database | `360RetailDB` |
+| Username | `postgres` |
+| Password | `12345` |
+
+4. Tick **Save password** → Click **Save**
+5. Browse các tables trong schemas: `identity`, `saas`, `hr`, `sales`, `crm`
+
+> **Lưu ý**: Nếu hostname `360retail-db` không được chấp nhận, hãy thử dùng IP address của container. Chạy lệnh sau để lấy IP:
+> ```bash
+> docker inspect 360retail-db --format "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}"
+> ```
+
+---
+
+## 8. Xử lý lỗi Database thường gặp
+
+### Lỗi thiếu cột (VD: `must_change_password`, `app_user_id`, v.v.)
+
+**Nguyên nhân**: Docker volume giữ dữ liệu cũ, script SQL mới không được chạy lại.
+
+**Giải pháp 1 - Reset hoàn toàn DB** (mất dữ liệu cũ):
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+**Giải pháp 2 - Giữ dữ liệu, thêm cột thủ công** (qua pgAdmin):
+1. Mở pgAdmin → Kết nối database
+2. Click chuột phải vào database `360RetailDB` → **Query Tool**
+3. Chạy các lệnh ALTER TABLE cần thiết, ví dụ:
+```sql
+ALTER TABLE identity.app_users
+ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;
+```
+
+---
+
 Chúc các bạn code vui vẻ! 🚀
