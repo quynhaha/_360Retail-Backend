@@ -68,9 +68,11 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
 // DI
 builder.Services.AddScoped<IStoreService, StoreService>();
 // HTTP Client -> Identity Service
+var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] 
+    ?? "http://localhost:5297";
 builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7116");
+    client.BaseAddress = new Uri(identityServiceUrl);
 });
 
 // Authentication (JWT)

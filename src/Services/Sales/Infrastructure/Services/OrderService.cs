@@ -30,7 +30,23 @@ public class OrderService : IOrderService
             ? employeeWrapper.Id 
             : null;
 
-        // 2. Validate Products & Stock
+        // 2. Validate CustomerId if provided
+        Guid? validatedCustomerId = null;
+        if (dto.CustomerId.HasValue && dto.CustomerId.Value != Guid.Empty)
+        {
+            var customerExists = await _db.Database
+                .SqlQueryRaw<IdWrapper>(
+                    "SELECT id as \"Id\" FROM crm.customers WHERE id = {0} AND store_id = {1}", 
+                    dto.CustomerId.Value, storeId)
+                .FirstOrDefaultAsync();
+            
+            if (customerExists == null)
+                throw new Exception("Customer not found or does not belong to this store");
+            
+            validatedCustomerId = dto.CustomerId.Value;
+        }
+
+        // 3. Validate Products & Stock
         var productIds = dto.Items.Select(x => x.ProductId).Distinct().ToList();
         var products = await _db.Products
             .Include(p => p.ProductVariants) // Include Variants
@@ -41,13 +57,13 @@ public class OrderService : IOrderService
         if (products.Count != productIds.Count)
             throw new Exception("Some products were not found or belong to another store");
 
-        // 3. Prepare Order
+        // 4. Prepare Order
         var order = new Order
         {
             Id = Guid.NewGuid(),
             StoreId = storeId,
             EmployeeId = employeeId,
-            CustomerId = dto.CustomerId,
+            CustomerId = validatedCustomerId,
             Code = GenerateOrderCode(),
             PaymentMethod = dto.PaymentMethod,
             Status = "Completed", 

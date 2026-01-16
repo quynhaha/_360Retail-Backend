@@ -380,3 +380,43 @@ ADD COLUMN IF NOT EXISTS product_variant_id UUID NULL REFERENCES sales.product_v
 
 ALTER TABLE sales.orders 
 ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50);
+
+-- 11/1/2026 - Account Activation Tokens & Temp Password Flow
+CREATE TABLE IF NOT EXISTS identity.account_activation_tokens (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL,
+    token VARCHAR(200) NOT NULL,
+    expired_at TIMESTAMPTZ NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_activation_user
+        FOREIGN KEY (user_id)
+        REFERENCES identity.app_users(id)
+        ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS ux_activation_token
+ON identity.account_activation_tokens(token);
+
+CREATE INDEX IF NOT EXISTS idx_activation_user
+ON identity.account_activation_tokens(user_id);
+
+-- Remove old activation columns from app_users (now using separate table)
+ALTER TABLE identity.app_users
+    DROP COLUMN IF EXISTS activation_token,
+    DROP COLUMN IF EXISTS activation_token_expired_at;
+
+-- Add must_change_password flag for temp password login flow
+ALTER TABLE identity.app_users
+ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT FALSE;
+
+-- Set existing active users to not require password change
+UPDATE identity.app_users
+SET must_change_password = FALSE
+WHERE status = 'Active'
+  AND is_activated = TRUE
+  AND password_hash IS NOT NULL;
+
+-- 14/1/2026: Ensure default is FALSE for must_change_password
+ALTER TABLE identity.app_users
+ALTER COLUMN must_change_password SET DEFAULT FALSE;
