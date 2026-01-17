@@ -11,9 +11,12 @@
 
 | Service | URL | Port |
 |---------|-----|------|
+| **API Gateway** | `http://localhost:5001` | 5001 |
 | **Identity** | `http://localhost:5297` | 5297 |
 | **SaaS** | `http://localhost:5031` | 5031 |
-| **Sales** | `http://localhost:5003` | 5003 |
+| **Sales** | `http://localhost:5091` | 5091 |
+| **HR** | `http://localhost:5280` | 5280 |
+| **CRM** | `http://localhost:5169` | 5169 |
 
 ### Authentication
 

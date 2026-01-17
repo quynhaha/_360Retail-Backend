@@ -26,13 +26,28 @@ Lệnh này sẽ khởi chạy:
 
 ## 3. Danh sách API (Swagger)
 
-Sau khi chạy Docker, các bạn có thể truy cập Swagger của từng service để xem tài liệu API:
+### 🎯 API Gateway (Khuyên dùng)
+
+Truy cập **một URL duy nhất** để xem tất cả APIs:
+
+- **[API Gateway](http://localhost:5000/swagger)** - Gộp tất cả services
 
 - [Identity API](http://localhost:5297/swagger)
 - [SaaS API](http://localhofst:5031/swagger)
 - [Sales API](http://localhost:5091/swagger)
 - [HR API](http://localhost:5280/swagger)
 - [CRM API](http://localhost:5169/swagger)
+
+### Routing qua API Gateway
+
+Khi sử dụng API Gateway, các endpoint sẽ có prefix tương ứng:
+| Service | Prefix | Ví dụ |
+|---------|--------|-------|
+| Identity | `/identity` | `http://localhost:5000/identity/auth/login` |
+| SaaS | `/saas` | `http://localhost:5000/saas/stores` |
+| Sales | `/sales` | `http://localhost:5000/sales/products` |
+| HR | `/hr` | `http://localhost:5000/hr/employees` |
+| CRM | `/crm` | `http://localhost:5000/crm/customers` |
 
 ## 4. Cấu hình CORS
 

@@ -50,6 +50,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__SaasDb=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
+      - ServiceUrls__IdentityService=http://identity-api:8080
     ports:
       - "5031:8080"
     depends_on:
@@ -65,6 +66,10 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
+      # Cloudinary Configuration - Set these in .env file
+      - Cloudinary__CloudName=${CLOUDINARY_CLOUD_NAME}
+      - Cloudinary__ApiKey=${CLOUDINARY_API_KEY}
+      - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET}
     ports:
       - "5091:8080"
     depends_on:
@@ -107,7 +112,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
     ports:
-      - "5000:8080"
+      - "5001:8080"
     depends_on:
       - identity-api
       - saas-api

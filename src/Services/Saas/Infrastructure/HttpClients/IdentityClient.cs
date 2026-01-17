@@ -32,7 +32,7 @@ public class IdentityClient : IIdentityClient
         if (!res.IsSuccessStatusCode)
         {
             var error = await res.Content.ReadAsStringAsync();
-            throw new Exception($"Assign store failed: {error}");
+            throw new Exception($"Assign store failed: [{res.StatusCode}] {_http.BaseAddress}/api/auth/assign-store - {error}");
         }
     }
 
@@ -52,5 +52,19 @@ public class IdentityClient : IIdentityClient
             return false;
 
         return await response.Content.ReadFromJsonAsync<bool>();
+    }
+
+    public async Task<List<UserStoreAccessDto>> GetMyStoresAsync(string accessToken)
+    {
+        _http.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _http.GetAsync("/api/identity/stores-my");
+
+        if (!response.IsSuccessStatusCode)
+            return new List<UserStoreAccessDto>();
+
+        return await response.Content.ReadFromJsonAsync<List<UserStoreAccessDto>>()
+            ?? new List<UserStoreAccessDto>();
     }
 }
