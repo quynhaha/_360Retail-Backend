@@ -45,7 +45,7 @@ public class IdentityClient : IIdentityClient
             new AuthenticationHeaderValue("Bearer", accessToken);
 
         var response = await _http.GetAsync(
-            $"/api/auth/has-store-access?storeId={storeId}&role={roleInStore}"
+            $"/api/identity/has-store-access?storeId={storeId}&role={roleInStore}"
         );
 
         if (!response.IsSuccessStatusCode)
