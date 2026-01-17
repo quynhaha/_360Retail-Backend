@@ -58,7 +58,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                 BarCode = request.BarCode,
                 Price = request.Price,
                 CostPrice = request.CostPrice,
-                StockQuantity = request.StockQuantity,
+                StockQuantity = request.StockQuantity ?? 0,
                 Description = request.Description,
                 CategoryId = request.CategoryId,
                 IsActive = true,
@@ -163,7 +163,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
 product.BarCode = request.BarCode;
  product.Price = request.Price;
 product.CostPrice = request.CostPrice;
-product.StockQuantity = request.StockQuantity;
+product.StockQuantity = request.StockQuantity ?? 0;
  product.Description = request.Description;
  product.CategoryId = request.CategoryId;
 product.IsActive = request.IsActive;

@@ -66,6 +66,10 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
+      # Cloudinary Configuration - Replace with your actual values
+      - Cloudinary__CloudName=${CLOUDINARY_CLOUD_NAME:-dndfromwh}
+      - Cloudinary__ApiKey=${CLOUDINARY_API_KEY:-your_api_key}
+      - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET:-your_api_secret}
     ports:
       - "5091:8080"
     depends_on:
