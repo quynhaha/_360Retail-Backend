@@ -19,7 +19,7 @@ namespace _360Retail.Services.Sales.Application.DTOs
         public decimal Price { get; set; }
 
         public decimal? CostPrice { get; set; }
-        public int? StockQuantity { get; set; } = 0;
+        public int StockQuantity { get; set; } = 0;
 
         [Required(ErrorMessage = "Please select a category")]
         public Guid CategoryId { get; set; }
