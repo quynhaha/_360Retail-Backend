@@ -1,0 +1,159 @@
+{
+    "Routes": [
+        {
+            "SwaggerKey": "identity",
+            "UpstreamPathTemplate": "/identity/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Patch"
+            ],
+            "DownstreamPathTemplate": "/api/{everything}",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 5297
+                }
+            ]
+        },
+        {
+            "SwaggerKey": "saas",
+            "UpstreamPathTemplate": "/saas/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Patch"
+            ],
+            "DownstreamPathTemplate": "/api/{everything}",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 5031
+                }
+            ]
+        },
+        {
+            "SwaggerKey": "sales",
+            "UpstreamPathTemplate": "/sales/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Patch"
+            ],
+            "DownstreamPathTemplate": "/api/{everything}",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 5091
+                }
+            ]
+        },
+        {
+            "SwaggerKey": "hr",
+            "UpstreamPathTemplate": "/hr/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Patch"
+            ],
+            "DownstreamPathTemplate": "/api/{everything}",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 5280
+                }
+            ]
+        },
+        {
+            "SwaggerKey": "crm",
+            "UpstreamPathTemplate": "/crm/{everything}",
+            "UpstreamHttpMethod": [
+                "Get",
+                "Post",
+                "Put",
+                "Delete",
+                "Patch"
+            ],
+            "DownstreamPathTemplate": "/api/{everything}",
+            "DownstreamScheme": "http",
+            "DownstreamHostAndPorts": [
+                {
+                    "Host": "localhost",
+                    "Port": 5169
+                }
+            ]
+        }
+    ],
+    "SwaggerEndPoints": [
+        {
+            "Key": "identity",
+            "TransformByOcelotConfig": true,
+            "Config": [
+                {
+                    "Name": "Identity API",
+                    "Version": "v1",
+                    "Url": "http://localhost:5297/swagger/v1/swagger.json"
+                }
+            ]
+        },
+        {
+            "Key": "saas",
+            "TransformByOcelotConfig": true,
+            "Config": [
+                {
+                    "Name": "SaaS API",
+                    "Version": "v1",
+                    "Url": "http://localhost:5031/swagger/v1/swagger.json"
+                }
+            ]
+        },
+        {
+            "Key": "sales",
+            "TransformByOcelotConfig": true,
+            "Config": [
+                {
+                    "Name": "Sales API",
+                    "Version": "v1",
+                    "Url": "http://localhost:5091/swagger/v1/swagger.json"
+                }
+            ]
+        },
+        {
+            "Key": "hr",
+            "TransformByOcelotConfig": true,
+            "Config": [
+                {
+                    "Name": "HR API",
+                    "Version": "v1",
+                    "Url": "http://localhost:5280/swagger/v1/swagger.json"
+                }
+            ]
+        },
+        {
+            "Key": "crm",
+            "TransformByOcelotConfig": true,
+            "Config": [
+                {
+                    "Name": "CRM API",
+                    "Version": "v1",
+                    "Url": "http://localhost:5169/swagger/v1/swagger.json"
+                }
+            ]
+        }
+    ],
+    "GlobalConfiguration": {
+        "BaseUrl": "http://localhost:5000"
+    }
+}

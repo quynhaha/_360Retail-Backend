@@ -99,6 +99,24 @@ services:
     networks:
       - 360retail-network
 
+  api-gateway:
+    build:
+      context: .
+      dockerfile: src/ApiGateway/Dockerfile
+    container_name: 360retail-api-gateway
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports:
+      - "5000:8080"
+    depends_on:
+      - identity-api
+      - saas-api
+      - sales-api
+      - hr-api
+      - crm-api
+    networks:
+      - 360retail-network
+
 networks:
   360retail-network:
     driver: bridge
