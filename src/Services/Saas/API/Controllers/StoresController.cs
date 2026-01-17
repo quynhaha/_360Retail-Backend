@@ -62,6 +62,45 @@ public class StoresController : ControllerBase
         return Ok(await _storeService.GetAllAsync());
     }
 
+    // GET MY OWNED STORES (for Store Owner)
+    [Authorize(Roles = "StoreOwner")]
+    [HttpGet("my-owned-stores")]
+    public async Task<IActionResult> GetMyOwnedStores()
+    {
+        var token = Request.Headers["Authorization"]
+            .ToString()
+            .Replace("Bearer ", "");
+
+        // Get all stores user has access to from Identity Service
+        var userStores = await _identityClient.GetMyStoresAsync(token);
+
+        // Filter only stores with "Owner" role
+        var ownedStoreIds = userStores
+            .Where(s => s.RoleInStore == "Owner")
+            .Select(s => s.StoreId)
+            .ToList();
+
+        if (!ownedStoreIds.Any())
+            return Ok(new List<object>());
+
+        // Get full store details from Saas DB
+        var stores = await _storeService.GetByIdsAsync(ownedStoreIds);
+
+        // Combine with access info
+        var result = stores.Select(store => new
+        {
+            store.Id,
+            store.StoreName,
+            store.Address,
+            store.Phone,
+            store.IsActive,
+            store.CreatedAt,
+            IsDefault = userStores.FirstOrDefault(s => s.StoreId == store.Id)?.IsDefault ?? false
+        });
+
+        return Ok(result);
+    }
+
     // READ ONE
     [AllowAnonymous]
     [HttpGet("{id:guid}")]
@@ -69,6 +108,36 @@ public class StoresController : ControllerBase
     {
         var store = await _storeService.GetByIdAsync(id);
         return store == null ? NotFound() : Ok(store);
+    }
+
+    // GET MY CURRENT STORE (for Manager/Staff)
+    [Authorize]
+    [HttpGet("my-store")]
+    public async Task<IActionResult> GetMyCurrentStore()
+    {
+        // Get store_id from JWT claims (set during login)
+        var storeIdClaim = User.FindFirst("store_id")?.Value;
+        
+        if (string.IsNullOrEmpty(storeIdClaim) || !Guid.TryParse(storeIdClaim, out var storeId))
+            return BadRequest(new { message = "User is not assigned to any store" });
+
+        var store = await _storeService.GetByIdAsync(storeId);
+        if (store == null)
+            return NotFound(new { message = "Store not found" });
+
+        // Also include role in store from JWT
+        var roleInStore = User.FindFirst("store_role")?.Value ?? "Unknown";
+
+        return Ok(new
+        {
+            store.Id,
+            store.StoreName,
+            store.Address,
+            store.Phone,
+            store.IsActive,
+            store.CreatedAt,
+            YourRole = roleInStore
+        });
     }
 
     // UPDATE

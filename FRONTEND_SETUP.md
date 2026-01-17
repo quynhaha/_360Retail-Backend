@@ -13,7 +13,7 @@ docker-compose up -d
 ```
 
 Lệnh này sẽ khởi chạy:
-- **PostgreSQL**: Database (Port 5432).
+- **PostgreSQL**: Database (Port 5433).
 - **pgAdmin**: Công cụ quản lý DB (Truy cập tại http://localhost:5050 - Email: `admin@360retail.com`, Pass: `admin`).
 - **Identity API**: Quản lý tài khoản (Port 5297).
 - **SaaS API**: Quản lý cửa hàng/hệ thống (Port 5031).
@@ -26,7 +26,7 @@ Sau khi chạy Docker, các bạn có thể truy cập Swagger:
 
 ### 🎯 API Gateway (Khuyên dùng)
 Truy cập **một URL duy nhất** để xem tất cả APIs:
-- **[API Gateway](http://localhost:5000/swagger)** - Gộp tất cả services
+- **[API Gateway](http://localhost:5001/swagger)** - Gộp tất cả services
 
 ### Swagger riêng từng service (nếu cần debug)
 - [Identity API](http://localhost:5297/swagger)
@@ -39,11 +39,11 @@ Truy cập **một URL duy nhất** để xem tất cả APIs:
 Khi sử dụng API Gateway, các endpoint sẽ có prefix tương ứng:
 | Service | Prefix | Ví dụ |
 |---------|--------|-------|
-| Identity | `/identity` | `http://localhost:5000/identity/auth/login` |
-| SaaS | `/saas` | `http://localhost:5000/saas/stores` |
-| Sales | `/sales` | `http://localhost:5000/sales/products` |
-| HR | `/hr` | `http://localhost:5000/hr/employees` |
-| CRM | `/crm` | `http://localhost:5000/crm/customers` |
+| Identity | `/identity` | `http://localhost:5001/identity/auth/login` |
+| SaaS | `/saas` | `http://localhost:5001/saas/stores` |
+| Sales | `/sales` | `http://localhost:5001/sales/products` |
+| HR | `/hr` | `http://localhost:5001/hr/employees` |
+| CRM | `/crm` | `http://localhost:5001/crm/customers` |
 
 ## 4. Cấu hình CORS
 Backend đã được cấu hình CORS để cho phép các request từ các port phổ biến sau:

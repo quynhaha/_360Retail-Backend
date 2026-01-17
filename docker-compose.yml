@@ -50,6 +50,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__SaasDb=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
+      - ServiceUrls__IdentityService=http://identity-api:8080
     ports:
       - "5031:8080"
     depends_on:
