@@ -49,6 +49,15 @@ public class StoreService : IStoreService
             .ToListAsync();
     }
 
+    // READ BY IDS
+    public async Task<List<StoreResponseDto>> GetByIdsAsync(List<Guid> storeIds)
+    {
+        return await _db.Stores
+            .Where(s => storeIds.Contains(s.Id))
+            .Select(s => MapToDto(s))
+            .ToListAsync();
+    }
+
     // UPDATE
     public async Task<bool> UpdateAsync(Guid storeId, UpdateStoreDto dto)
     {

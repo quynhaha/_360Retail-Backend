@@ -5,6 +5,7 @@ public interface IStoreService
 {
     Task<StoreResponseDto> CreateAsync(Guid ownerUserId, CreateStoreDto dto);
     Task<StoreResponseDto?> GetByIdAsync(Guid storeId);
+    Task<List<StoreResponseDto>> GetByIdsAsync(List<Guid> storeIds);
     Task<List<StoreResponseDto>> GetAllAsync();
     Task<bool> UpdateAsync(Guid storeId, UpdateStoreDto dto);
     Task<bool> DeleteAsync(Guid storeId);

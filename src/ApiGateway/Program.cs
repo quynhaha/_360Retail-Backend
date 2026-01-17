@@ -37,8 +37,16 @@ app.UseSwaggerForOcelotUI(opt =>
     opt.PathToSwaggerGenerator = "/swagger/docs";
 });
 
-// Auto redirect root to swagger
-app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
+// Auto redirect root to swagger (must be before Ocelot)
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path == "/" || context.Request.Path == "")
+    {
+        context.Response.Redirect("/swagger");
+        return;
+    }
+    await next();
+});
 
 await app.UseOcelot();
 
