@@ -37,7 +37,7 @@ public class StoreService : IStoreService
     // READ ONE
     public async Task<StoreResponseDto?> GetByIdAsync(Guid storeId)
     {
-        var store = await _db.Stores.FirstOrDefaultAsync(s => s.Id == storeId);
+        var store = await _db.Stores.FirstOrDefaultAsync(s => s.Id == storeId && s.IsActive);
         return store == null ? null : MapToDto(store);
     }
 
@@ -45,6 +45,7 @@ public class StoreService : IStoreService
     public async Task<List<StoreResponseDto>> GetAllAsync()
     {
         return await _db.Stores
+            .Where(s => s.IsActive)
             .Select(s => MapToDto(s))
             .ToListAsync();
     }
@@ -53,21 +54,29 @@ public class StoreService : IStoreService
     public async Task<List<StoreResponseDto>> GetByIdsAsync(List<Guid> storeIds)
     {
         return await _db.Stores
-            .Where(s => storeIds.Contains(s.Id))
+            .Where(s => storeIds.Contains(s.Id) && s.IsActive)
             .Select(s => MapToDto(s))
             .ToListAsync();
     }
 
-    // UPDATE
+    // UPDATE (PARTIAL UPDATE - only update non-null fields)
     public async Task<bool> UpdateAsync(Guid storeId, UpdateStoreDto dto)
     {
         var store = await _db.Stores.FirstOrDefaultAsync(s => s.Id == storeId);
         if (store == null) return false;
 
-        store.StoreName = dto.StoreName;
-        store.Address = dto.Address;
-        store.Phone = dto.Phone;
-        store.IsActive = dto.IsActive;
+        // Only update fields that are provided (not null)
+        if (dto.StoreName != null)
+            store.StoreName = dto.StoreName;
+        
+        if (dto.Address != null)
+            store.Address = dto.Address;
+        
+        if (dto.Phone != null)
+            store.Phone = dto.Phone;
+        
+        if (dto.IsActive.HasValue)
+            store.IsActive = dto.IsActive.Value;
 
         await _db.SaveChangesAsync();
         return true;

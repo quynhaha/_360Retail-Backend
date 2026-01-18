@@ -152,22 +152,44 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
             if (product == null)
                 throw new Exception("Product not found");
 
-            bool categoryExists = await _context.Categories.AnyAsync(c =>
-                c.Id == request.CategoryId &&
-                c.StoreId == storeId);
+            // PARTIAL UPDATE: Only update fields that are provided (not null)
 
-            if (!categoryExists)
-                throw new Exception("Category does not belong to this store");
+            // Update CategoryId if provided
+            if (request.CategoryId.HasValue)
+            {
+                bool categoryExists = await _context.Categories.AnyAsync(c =>
+                    c.Id == request.CategoryId.Value &&
+                    c.StoreId == storeId);
 
-            product.ProductName = request.ProductName;
-product.BarCode = request.BarCode;
- product.Price = request.Price;
-product.CostPrice = request.CostPrice;
-product.StockQuantity = request.StockQuantity;
- product.Description = request.Description;
- product.CategoryId = request.CategoryId;
-product.IsActive = request.IsActive;
+                if (!categoryExists)
+                    throw new Exception("Category does not belong to this store");
+                
+                product.CategoryId = request.CategoryId.Value;
+            }
 
+            // Update other fields only if provided
+            if (request.ProductName != null)
+                product.ProductName = request.ProductName;
+            
+            if (request.BarCode != null)
+                product.BarCode = request.BarCode;
+            
+            if (request.Price.HasValue)
+                product.Price = request.Price.Value;
+            
+            if (request.CostPrice.HasValue)
+                product.CostPrice = request.CostPrice.Value;
+            
+            if (request.StockQuantity.HasValue)
+                product.StockQuantity = request.StockQuantity.Value;
+            
+            if (request.Description != null)
+                product.Description = request.Description;
+            
+            if (request.IsActive.HasValue)
+                product.IsActive = request.IsActive.Value;
+
+            // Update image if new file provided
             if (request.ImageFile != null)
             {
                 if (!string.IsNullOrEmpty(product.ImageUrl))
@@ -177,7 +199,7 @@ product.IsActive = request.IsActive;
                     request.ImageFile, "products");
             }
 
-            // Handle Variants Update
+            // Handle Variants Update (only if VariantsJson is provided)
             var variantDtos = request.GetVariants();
             if (variantDtos.Count > 0)
             {
