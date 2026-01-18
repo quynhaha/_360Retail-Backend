@@ -420,3 +420,14 @@ WHERE status = 'Active'
 -- 14/1/2026: Ensure default is FALSE for must_change_password
 ALTER TABLE identity.app_users
 ALTER COLUMN must_change_password SET DEFAULT FALSE;
+
+-- 18/1/2026: Add missing columns to hr.employees for Employee entity
+ALTER TABLE hr.employees
+ADD COLUMN IF NOT EXISTS face_data TEXT;
+
+ALTER TABLE hr.employees
+ADD COLUMN IF NOT EXISTS registered_device_id VARCHAR(100);
+
+-- 18/1/2026: Add avatar_url column for employee avatars
+ALTER TABLE hr.employees
+ADD COLUMN IF NOT EXISTS avatar_url TEXT;

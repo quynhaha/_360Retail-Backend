@@ -92,7 +92,7 @@ public class SuperAdminUserService : ISuperAdminUserService
     }
 
  
-    // UPDATE USER
+    // UPDATE USER (PARTIAL UPDATE - only update non-null fields)
     public async Task UpdateAsync(Guid id, UpdateUserDto dto)
     {
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == id);
@@ -100,8 +100,12 @@ public class SuperAdminUserService : ISuperAdminUserService
         if (user == null)
             throw new Exception("User not found");
 
-        user.IsActivated = dto.IsActivated;
-        user.Status = dto.Status;
+        // Only update fields that are provided (not null)
+        if (dto.IsActivated.HasValue)
+            user.IsActivated = dto.IsActivated.Value;
+        
+        if (dto.Status != null)
+            user.Status = dto.Status;
 
         await _db.SaveChangesAsync();
     }

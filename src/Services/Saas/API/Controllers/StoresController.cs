@@ -57,15 +57,15 @@ public class StoresController : ControllerBase
     // READ ALL
     [Authorize(Roles = "SuperAdmin")]
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
     {
-        return Ok(await _storeService.GetAllAsync());
+        return Ok(await _storeService.GetAllAsync(includeInactive));
     }
 
     // GET MY OWNED STORES (for Store Owner)
     [Authorize(Roles = "StoreOwner")]
     [HttpGet("my-owned-stores")]
-    public async Task<IActionResult> GetMyOwnedStores()
+    public async Task<IActionResult> GetMyOwnedStores([FromQuery] bool includeInactive = false)
     {
         var token = Request.Headers["Authorization"]
             .ToString()
@@ -83,8 +83,8 @@ public class StoresController : ControllerBase
         if (!ownedStoreIds.Any())
             return Ok(new List<object>());
 
-        // Get full store details from Saas DB
-        var stores = await _storeService.GetByIdsAsync(ownedStoreIds);
+        // Get full store details from Saas DB (include inactive if requested)
+        var stores = await _storeService.GetByIdsAsync(ownedStoreIds, includeInactive);
 
         // Combine with access info
         var result = stores.Select(store => new

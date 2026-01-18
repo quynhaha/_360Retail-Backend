@@ -12,5 +12,6 @@ namespace _360Retail.Services.Sales.Application.DTOs
         public string CategoryName { get; set; }
         public Guid? ParentId { get; set; } 
         public string ParentName { get; set; }
+        public bool IsActive { get; set; }
     }
 }

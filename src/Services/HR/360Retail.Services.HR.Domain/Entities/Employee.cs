@@ -25,6 +25,8 @@ public partial class Employee
 
     public string? Status { get; set; }
 
+    public string? AvatarUrl { get; set; }
+
     public virtual ICollection<WorkTask> Tasks { get; set; } = new List<WorkTask>();
 
     public virtual ICollection<Timekeeping> Timekeepings { get; set; } = new List<Timekeeping>();

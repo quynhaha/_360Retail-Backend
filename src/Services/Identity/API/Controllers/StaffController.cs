@@ -7,7 +7,7 @@ using _360Retail.Services.Identity.Application.Interfaces;
 namespace _360Retail.Services.Identity.API.Controllers;
 
 [ApiController]
-[Route("identity/staff")]
+[Route("api/staff")]
 [Authorize(Roles = "Admin,StoreOwner")]
 public class StaffController : ControllerBase
 {

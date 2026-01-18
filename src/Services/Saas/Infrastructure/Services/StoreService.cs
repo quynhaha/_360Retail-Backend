@@ -35,39 +35,48 @@ public class StoreService : IStoreService
     }
 
     // READ ONE
-    public async Task<StoreResponseDto?> GetByIdAsync(Guid storeId)
+    public async Task<StoreResponseDto?> GetByIdAsync(Guid storeId, bool includeInactive = false)
     {
-        var store = await _db.Stores.FirstOrDefaultAsync(s => s.Id == storeId);
+        var store = await _db.Stores.FirstOrDefaultAsync(s => s.Id == storeId && (includeInactive || s.IsActive));
         return store == null ? null : MapToDto(store);
     }
 
     // READ ALL
-    public async Task<List<StoreResponseDto>> GetAllAsync()
+    public async Task<List<StoreResponseDto>> GetAllAsync(bool includeInactive = false)
     {
         return await _db.Stores
+            .Where(s => includeInactive || s.IsActive)
             .Select(s => MapToDto(s))
             .ToListAsync();
     }
 
     // READ BY IDS
-    public async Task<List<StoreResponseDto>> GetByIdsAsync(List<Guid> storeIds)
+    public async Task<List<StoreResponseDto>> GetByIdsAsync(List<Guid> storeIds, bool includeInactive = false)
     {
         return await _db.Stores
-            .Where(s => storeIds.Contains(s.Id))
+            .Where(s => storeIds.Contains(s.Id) && (includeInactive || s.IsActive))
             .Select(s => MapToDto(s))
             .ToListAsync();
     }
 
-    // UPDATE
+    // UPDATE (PARTIAL UPDATE - only update non-null/non-empty fields)
     public async Task<bool> UpdateAsync(Guid storeId, UpdateStoreDto dto)
     {
         var store = await _db.Stores.FirstOrDefaultAsync(s => s.Id == storeId);
         if (store == null) return false;
 
-        store.StoreName = dto.StoreName;
-        store.Address = dto.Address;
-        store.Phone = dto.Phone;
-        store.IsActive = dto.IsActive;
+        // Only update fields that are provided (not null or empty)
+        if (!string.IsNullOrWhiteSpace(dto.StoreName))
+            store.StoreName = dto.StoreName;
+        
+        if (!string.IsNullOrWhiteSpace(dto.Address))
+            store.Address = dto.Address;
+        
+        if (!string.IsNullOrWhiteSpace(dto.Phone))
+            store.Phone = dto.Phone;
+        
+        if (dto.IsActive.HasValue)
+            store.IsActive = dto.IsActive.Value;
 
         await _db.SaveChangesAsync();
         return true;

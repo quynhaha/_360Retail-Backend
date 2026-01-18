@@ -21,6 +21,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 #region ===== HTTP & EMAIL =====
 builder.Services.AddHttpClient();
+
+// Named HttpClient for HR Service
+builder.Services.AddHttpClient("HrService", client =>
+{
+    var baseUrl = builder.Configuration["ServiceUrls:HrService"] ?? "http://localhost:5280";
+    client.BaseAddress = new Uri(baseUrl);
+});
+
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
 #endregion
 
