@@ -27,7 +27,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
         {
             // Filter by StoreId - only return categories belonging to the current store
             var categories = await _context.Categories
-                                           .Where(c => c.StoreId == storeId)
+                                           .Where(c => c.StoreId == storeId && c.IsActive)
                                            .Include(c => c.Parent)
                                            .OrderByDescending(c => c.Id) 
                                            .ToListAsync();
@@ -59,19 +59,34 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                 .FirstOrDefaultAsync(c => c.Id == request.Id && c.StoreId == storeId);
             if (category == null) throw new Exception("Category not found!");
 
-            // Check trùng tên nếu sửa tên (trong cùng store)
-            if (category.CategoryName != request.CategoryName)
+            // PARTIAL UPDATE: Only update fields that are provided (not null)
+            
+            // Update CategoryName if provided
+            if (request.CategoryName != null)
             {
-                bool exists = await _context.Categories.AnyAsync(c => 
-                    c.StoreId == storeId && 
-                    c.CategoryName == request.CategoryName);
-                if (exists) throw new Exception("Category name already exists!");
+                // Check trùng tên nếu sửa tên (trong cùng store)
+                if (category.CategoryName != request.CategoryName)
+                {
+                    bool exists = await _context.Categories.AnyAsync(c => 
+                        c.StoreId == storeId && 
+                        c.CategoryName == request.CategoryName);
+                    if (exists) throw new Exception("Category name already exists!");
+                }
+                category.CategoryName = request.CategoryName;
             }
 
-            // Map dữ liệu 
-            category.CategoryName = request.CategoryName;
-            category.ParentId = request.ParentId;
-            category.IsActive = request.IsActive;
+            // Update ParentId if provided
+            if (request.ParentId.HasValue)
+            {
+                // Use Guid.Empty to remove parent (set to null)
+                category.ParentId = request.ParentId.Value == Guid.Empty ? null : request.ParentId.Value;
+            }
+
+            // Update IsActive if provided
+            if (request.IsActive.HasValue)
+            {
+                category.IsActive = request.IsActive.Value;
+            }
 
             _context.Categories.Update(category);
             await _context.SaveChangesAsync();
