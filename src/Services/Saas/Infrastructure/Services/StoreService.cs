@@ -35,26 +35,26 @@ public class StoreService : IStoreService
     }
 
     // READ ONE
-    public async Task<StoreResponseDto?> GetByIdAsync(Guid storeId)
+    public async Task<StoreResponseDto?> GetByIdAsync(Guid storeId, bool includeInactive = false)
     {
-        var store = await _db.Stores.FirstOrDefaultAsync(s => s.Id == storeId && s.IsActive);
+        var store = await _db.Stores.FirstOrDefaultAsync(s => s.Id == storeId && (includeInactive || s.IsActive));
         return store == null ? null : MapToDto(store);
     }
 
     // READ ALL
-    public async Task<List<StoreResponseDto>> GetAllAsync()
+    public async Task<List<StoreResponseDto>> GetAllAsync(bool includeInactive = false)
     {
         return await _db.Stores
-            .Where(s => s.IsActive)
+            .Where(s => includeInactive || s.IsActive)
             .Select(s => MapToDto(s))
             .ToListAsync();
     }
 
     // READ BY IDS
-    public async Task<List<StoreResponseDto>> GetByIdsAsync(List<Guid> storeIds)
+    public async Task<List<StoreResponseDto>> GetByIdsAsync(List<Guid> storeIds, bool includeInactive = false)
     {
         return await _db.Stores
-            .Where(s => storeIds.Contains(s.Id) && s.IsActive)
+            .Where(s => storeIds.Contains(s.Id) && (includeInactive || s.IsActive))
             .Select(s => MapToDto(s))
             .ToListAsync();
     }

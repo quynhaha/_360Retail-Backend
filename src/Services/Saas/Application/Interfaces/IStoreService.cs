@@ -4,9 +4,9 @@ namespace _360Retail.Services.Saas.Application.Interfaces;
 public interface IStoreService
 {
     Task<StoreResponseDto> CreateAsync(Guid ownerUserId, CreateStoreDto dto);
-    Task<StoreResponseDto?> GetByIdAsync(Guid storeId);
-    Task<List<StoreResponseDto>> GetByIdsAsync(List<Guid> storeIds);
-    Task<List<StoreResponseDto>> GetAllAsync();
+    Task<StoreResponseDto?> GetByIdAsync(Guid storeId, bool includeInactive = false);
+    Task<List<StoreResponseDto>> GetByIdsAsync(List<Guid> storeIds, bool includeInactive = false);
+    Task<List<StoreResponseDto>> GetAllAsync(bool includeInactive = false);
     Task<bool> UpdateAsync(Guid storeId, UpdateStoreDto dto);
     Task<bool> DeleteAsync(Guid storeId);
 }
