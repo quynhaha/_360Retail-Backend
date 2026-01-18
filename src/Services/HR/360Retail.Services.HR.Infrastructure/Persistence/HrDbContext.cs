@@ -58,6 +58,7 @@ public partial class HrDbContext : DbContext
                 .HasDefaultValueSql("'Active'::character varying")
                 .HasColumnName("status");
             entity.Property(e => e.StoreId).HasColumnName("store_id");
+            entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
         });
 
         modelBuilder.Entity<WorkTask>(entity =>
