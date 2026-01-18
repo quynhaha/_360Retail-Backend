@@ -59,20 +59,20 @@ public class StoreService : IStoreService
             .ToListAsync();
     }
 
-    // UPDATE (PARTIAL UPDATE - only update non-null fields)
+    // UPDATE (PARTIAL UPDATE - only update non-null/non-empty fields)
     public async Task<bool> UpdateAsync(Guid storeId, UpdateStoreDto dto)
     {
         var store = await _db.Stores.FirstOrDefaultAsync(s => s.Id == storeId);
         if (store == null) return false;
 
-        // Only update fields that are provided (not null)
-        if (dto.StoreName != null)
+        // Only update fields that are provided (not null or empty)
+        if (!string.IsNullOrWhiteSpace(dto.StoreName))
             store.StoreName = dto.StoreName;
         
-        if (dto.Address != null)
+        if (!string.IsNullOrWhiteSpace(dto.Address))
             store.Address = dto.Address;
         
-        if (dto.Phone != null)
+        if (!string.IsNullOrWhiteSpace(dto.Phone))
             store.Phone = dto.Phone;
         
         if (dto.IsActive.HasValue)

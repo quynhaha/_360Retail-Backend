@@ -59,10 +59,10 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                 .FirstOrDefaultAsync(c => c.Id == request.Id && c.StoreId == storeId);
             if (category == null) throw new Exception("Category not found!");
 
-            // PARTIAL UPDATE: Only update fields that are provided (not null)
+            // PARTIAL UPDATE: Only update fields that are provided (not null or empty)
             
             // Update CategoryName if provided
-            if (request.CategoryName != null)
+            if (!string.IsNullOrWhiteSpace(request.CategoryName))
             {
                 // Check trùng tên nếu sửa tên (trong cùng store)
                 if (category.CategoryName != request.CategoryName)

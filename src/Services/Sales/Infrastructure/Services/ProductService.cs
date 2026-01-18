@@ -167,11 +167,11 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                 product.CategoryId = request.CategoryId.Value;
             }
 
-            // Update other fields only if provided
-            if (request.ProductName != null)
+            // Update other fields only if provided (not null or empty)
+            if (!string.IsNullOrWhiteSpace(request.ProductName))
                 product.ProductName = request.ProductName;
             
-            if (request.BarCode != null)
+            if (!string.IsNullOrWhiteSpace(request.BarCode))
                 product.BarCode = request.BarCode;
             
             if (request.Price.HasValue)
@@ -183,7 +183,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
             if (request.StockQuantity.HasValue)
                 product.StockQuantity = request.StockQuantity.Value;
             
-            if (request.Description != null)
+            if (!string.IsNullOrWhiteSpace(request.Description))
                 product.Description = request.Description;
             
             if (request.IsActive.HasValue)
