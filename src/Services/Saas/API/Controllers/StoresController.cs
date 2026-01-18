@@ -57,9 +57,9 @@ public class StoresController : ControllerBase
     // READ ALL
     [Authorize(Roles = "SuperAdmin")]
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
     {
-        return Ok(await _storeService.GetAllAsync());
+        return Ok(await _storeService.GetAllAsync(includeInactive));
     }
 
     // GET MY OWNED STORES (for Store Owner)

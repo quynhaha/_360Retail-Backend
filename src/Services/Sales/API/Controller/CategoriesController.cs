@@ -17,13 +17,13 @@ namespace _360Retail.Services.Sales.API.Controllers
 
         [AllowAnonymous]
         [HttpGet]
-        public async Task<IActionResult> GetList([FromQuery] Guid? storeId)
+        public async Task<IActionResult> GetList([FromQuery] Guid? storeId, [FromQuery] bool includeInactive = false)
         {
             var targetStoreId = storeId ?? GetCurrentStoreId();
             if (targetStoreId == Guid.Empty)
                 return BadResult("Store ID is required");
 
-            var data = await _categoryService.GetAllAsync(targetStoreId);
+            var data = await _categoryService.GetAllAsync(targetStoreId, includeInactive);
             return OkResult(data);
         }
 

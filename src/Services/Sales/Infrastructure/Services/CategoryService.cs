@@ -23,11 +23,11 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
             _mapper = mapper;
         }
 
-        public async Task<List<CategoryDto>> GetAllAsync(Guid storeId)
+        public async Task<List<CategoryDto>> GetAllAsync(Guid storeId, bool includeInactive = false)
         {
             // Filter by StoreId - only return categories belonging to the current store
             var categories = await _context.Categories
-                                           .Where(c => c.StoreId == storeId && c.IsActive)
+                                           .Where(c => c.StoreId == storeId && (includeInactive || c.IsActive))
                                            .Include(c => c.Parent)
                                            .OrderByDescending(c => c.Id) 
                                            .ToListAsync();
