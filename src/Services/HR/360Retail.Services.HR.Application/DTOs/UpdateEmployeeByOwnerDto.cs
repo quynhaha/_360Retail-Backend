@@ -16,7 +16,7 @@ public class UpdateEmployeeByOwnerDto
     public decimal? BaseSalary { get; set; }
     
     /// <summary>
-    /// Status: Active, Inactive
+    /// IsActive: true/false (soft delete)
     /// </summary>
-    public string? Status { get; set; }
+    public bool? IsActive { get; set; }
 }

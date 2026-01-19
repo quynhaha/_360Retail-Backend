@@ -38,7 +38,7 @@ public class EmployeeService : IEmployeeService
             FullName = dto.Email,  // Use email as initial name
             Position = dto.Role,   // Staff or Manager
             JoinDate = DateTime.UtcNow,
-            Status = "Active"
+            IsActive = true
         };
 
         _db.Employees.Add(employee);
@@ -53,7 +53,7 @@ public class EmployeeService : IEmployeeService
             Position = employee.Position,
             Email = dto.Email,
             JoinDate = employee.JoinDate,
-            Status = employee.Status
+            IsActive = employee.IsActive
         };
     }
 
@@ -83,7 +83,7 @@ public class EmployeeService : IEmployeeService
             PhoneNumber = userInfo?.PhoneNumber,
             BaseSalary = employee.BaseSalary,
             JoinDate = employee.JoinDate,
-            Status = employee.Status,
+            IsActive = employee.IsActive,
             AvatarUrl = employee.AvatarUrl
         };
     }
@@ -178,7 +178,7 @@ public class EmployeeService : IEmployeeService
         var query = _db.Employees.Where(e => e.StoreId == storeId);
         
         if (!includeInactive)
-            query = query.Where(e => e.Status == "Active");
+            query = query.Where(e => e.IsActive);
             
         var employees = await query.ToListAsync();
 
@@ -199,7 +199,7 @@ public class EmployeeService : IEmployeeService
                 PhoneNumber = userInfo?.PhoneNumber,
                 BaseSalary = employee.BaseSalary,
                 JoinDate = employee.JoinDate,
-                Status = employee.Status,
+                IsActive = employee.IsActive,
                 AvatarUrl = employee.AvatarUrl
             });
         }
@@ -232,7 +232,7 @@ public class EmployeeService : IEmployeeService
             PhoneNumber = userInfo?.PhoneNumber,
             BaseSalary = employee.BaseSalary,
             JoinDate = employee.JoinDate,
-            Status = employee.Status,
+            IsActive = employee.IsActive,
             AvatarUrl = employee.AvatarUrl
         };
     }
@@ -243,7 +243,7 @@ public class EmployeeService : IEmployeeService
     public async Task<bool> UpdateByOwnerAsync(Guid employeeId, Guid storeId, UpdateEmployeeByOwnerDto dto)
     {
         Console.WriteLine($"[HR DEBUG] UpdateByOwnerAsync: employeeId={employeeId}, storeId={storeId}");
-        Console.WriteLine($"[HR DEBUG] DTO: FullName={dto.FullName ?? "null"}, Position={dto.Position ?? "null"}, BaseSalary={dto.BaseSalary}, Status={dto.Status ?? "null"}");
+        Console.WriteLine($"[HR DEBUG] DTO: FullName={dto.FullName ?? "null"}, Position={dto.Position ?? "null"}, BaseSalary={dto.BaseSalary}, IsActive={dto.IsActive}");
         
         var employee = await _db.Employees
             .FirstOrDefaultAsync(e => e.Id == employeeId && e.StoreId == storeId);
@@ -267,8 +267,8 @@ public class EmployeeService : IEmployeeService
         if (dto.BaseSalary.HasValue)
             employee.BaseSalary = dto.BaseSalary.Value;
 
-        if (!string.IsNullOrWhiteSpace(dto.Status))
-            employee.Status = dto.Status;
+        if (dto.IsActive.HasValue)
+            employee.IsActive = dto.IsActive.Value;
 
         await _db.SaveChangesAsync();
 
