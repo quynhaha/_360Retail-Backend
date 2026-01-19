@@ -23,4 +23,23 @@ public interface IEmployeeService
     /// Update employee avatar URL
     /// </summary>
     Task<bool> UpdateAvatarAsync(Guid appUserId, Guid storeId, string avatarUrl);
+    
+    #region Manager/Owner APIs
+    
+    /// <summary>
+    /// Get all employees in a store (for Manager/Owner)
+    /// </summary>
+    Task<List<EmployeeDto>> GetAllByStoreIdAsync(Guid storeId, bool includeInactive = false);
+    
+    /// <summary>
+    /// Get employee by ID (for Manager/Owner)
+    /// </summary>
+    Task<EmployeeDto?> GetByIdAsync(Guid employeeId, Guid storeId);
+    
+    /// <summary>
+    /// Update employee by Owner (salary, position, status)
+    /// </summary>
+    Task<bool> UpdateByOwnerAsync(Guid employeeId, Guid storeId, UpdateEmployeeByOwnerDto dto);
+    
+    #endregion
 }
