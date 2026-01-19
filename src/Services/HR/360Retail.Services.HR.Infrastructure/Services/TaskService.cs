@@ -3,16 +3,21 @@ using _360Retail.Services.HR.Application.Interfaces;
 using _360Retail.Services.HR.Domain.Entities;
 using _360Retail.Services.HR.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Json;
 
 namespace _360Retail.Services.HR.Infrastructure.Services;
 
 public class TaskService : ITaskService
 {
     private readonly HrDbContext _db;
+    private readonly IEmailService _emailService;
+    private readonly HttpClient _identityClient;
 
-    public TaskService(HrDbContext db)
+    public TaskService(HrDbContext db, IEmailService emailService, IHttpClientFactory httpClientFactory)
     {
         _db = db;
+        _emailService = emailService;
+        _identityClient = httpClientFactory.CreateClient("IdentityService");
     }
 
     /// <summary>
@@ -60,7 +65,63 @@ public class TaskService : ITaskService
         _db.Tasks.Add(task);
         await _db.SaveChangesAsync();
 
+        // Send email notification to assignee (fire and forget, don't block)
+        _ = SendTaskAssignmentEmailAsync(assignee, task);
+
         return MapToDto(task, assignee);
+    }
+
+    /// <summary>
+    /// Send email notification to assignee when task is created
+    /// </summary>
+    private async Task SendTaskAssignmentEmailAsync(Employee assignee, WorkTask task)
+    {
+        try
+        {
+            // Get assignee email from Identity service
+            var email = await GetUserEmailFromIdentity(assignee.AppUserId);
+            if (string.IsNullOrEmpty(email))
+                return;
+
+            await _emailService.SendTaskAssignmentEmailAsync(
+                email,
+                assignee.FullName,
+                task.Title,
+                task.Priority,
+                task.Description,
+                task.Deadline
+            );
+        }
+        catch
+        {
+            // Email failure should not fail task creation
+        }
+    }
+
+    /// <summary>
+    /// Get user email from Identity service
+    /// </summary>
+    private async Task<string?> GetUserEmailFromIdentity(Guid appUserId)
+    {
+        try
+        {
+            var response = await _identityClient.GetAsync($"/identity/internal/users/{appUserId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var userInfo = await response.Content.ReadFromJsonAsync<UserInfoResponse>();
+                return userInfo?.Email;
+            }
+        }
+        catch
+        {
+            // Identity service unavailable
+        }
+        return null;
+    }
+
+    private class UserInfoResponse
+    {
+        public string? Email { get; set; }
     }
 
     /// <summary>
