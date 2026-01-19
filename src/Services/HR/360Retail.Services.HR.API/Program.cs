@@ -27,6 +27,7 @@ builder.Services.AddHttpClient("IdentityService", client =>
 #region ===== APPLICATION SERVICES =====
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
 #endregion
 
 #region ===== JWT AUTHENTICATION =====
