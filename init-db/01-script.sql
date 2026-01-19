@@ -444,3 +444,18 @@ WHERE is_active IS NULL OR status IS NOT NULL;
 
 -- Step 3: Drop old status column (optional - uncomment if you want to remove it)
 -- ALTER TABLE hr.employees DROP COLUMN IF EXISTS status;
+
+-- 20/1/2026: Add is_active column to hr.tasks for soft delete
+ALTER TABLE hr.tasks
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+
+-- Set all existing tasks as active
+UPDATE hr.tasks
+SET is_active = TRUE
+WHERE is_active IS NULL;
+
+-- 20/1/2026: Add created_by_employee_id column to hr.tasks for update permission
+ALTER TABLE hr.tasks
+ADD COLUMN IF NOT EXISTS created_by_employee_id UUID REFERENCES hr.employees(id);
+
+
