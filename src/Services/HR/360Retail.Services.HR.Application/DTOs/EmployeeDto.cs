@@ -18,6 +18,6 @@ public class EmployeeDto
     
     public decimal? BaseSalary { get; set; }
     public DateTime? JoinDate { get; set; }
-    public string? Status { get; set; }
+    public bool IsActive { get; set; }
     public string? AvatarUrl { get; set; }
 }

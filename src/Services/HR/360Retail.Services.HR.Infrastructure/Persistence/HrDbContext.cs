@@ -53,10 +53,9 @@ public partial class HrDbContext : DbContext
             entity.Property(e => e.RegisteredDeviceId)
                 .HasMaxLength(100)
                 .HasColumnName("registered_device_id");
-            entity.Property(e => e.Status)
-                .HasMaxLength(50)
-                .HasDefaultValueSql("'Active'::character varying")
-                .HasColumnName("status");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
             entity.Property(e => e.StoreId).HasColumnName("store_id");
             entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
         });
