@@ -1,6 +1,7 @@
 using _360Retail.Services.HR.Application.Interfaces;
 using _360Retail.Services.HR.Infrastructure.Persistence;
 using _360Retail.Services.HR.Infrastructure.Services;
+using _360Retail.Services.HR.Infrastructure.Services.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -28,6 +29,7 @@ builder.Services.AddHttpClient("IdentityService", client =>
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddHttpClient<IEmailService, ResendEmailService>();
 #endregion
 
 #region ===== JWT AUTHENTICATION =====
