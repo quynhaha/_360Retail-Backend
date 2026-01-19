@@ -1,4 +1,5 @@
 using _360Retail.Services.Identity.Application.DTOs;
+using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +64,7 @@ public class InternalController : ControllerBase
 
     /// <summary>
     /// Update user's role in a store (called by HR service when Owner changes position)
+    /// Also syncs the system role in user_roles table
     /// </summary>
     [HttpPut("users/{userId}/stores/{storeId}/role")]
     public async Task<IActionResult> UpdateUserRoleInStore(Guid userId, Guid storeId, [FromBody] UpdateRoleDto dto)
@@ -75,6 +77,7 @@ public class InternalController : ControllerBase
             return BadRequest(new { success = false, message = "RoleInStore is required" });
         }
         
+        // 1. Update RoleInStore in user_store_access
         var access = await _db.UserStoreAccess
             .FirstOrDefaultAsync(a => a.UserId == userId && a.StoreId == storeId);
         
@@ -91,12 +94,66 @@ public class InternalController : ControllerBase
             return BadRequest(new { success = false, message = "Invalid role. Must be: Staff, Manager, or Owner" });
         }
 
-        Console.WriteLine($"[DEBUG] Updating role from {access.RoleInStore} to {dto.RoleInStore}");
+        Console.WriteLine($"[DEBUG] Updating RoleInStore from {access.RoleInStore} to {dto.RoleInStore}");
         access.RoleInStore = dto.RoleInStore;
-        await _db.SaveChangesAsync();
-        Console.WriteLine($"[DEBUG] Role updated successfully!");
 
-        return Ok(new { success = true, message = $"Role updated to {dto.RoleInStore}" });
+        // 2. Sync system role in user_roles table
+        // Map RoleInStore to system role name
+        var systemRoleName = dto.RoleInStore switch
+        {
+            "Owner" => "StoreOwner",
+            "Manager" => "Manager",
+            "Staff" => "Staff",
+            _ => "Staff"
+        };
+
+        Console.WriteLine($"[DEBUG] Syncing system role to: {systemRoleName}");
+
+        // Get the user with their roles
+        var user = await _db.AppUsers
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user != null)
+        {
+            // Get the target system role
+            var targetRole = await _db.AppRoles
+                .FirstOrDefaultAsync(r => r.RoleName == systemRoleName);
+
+            if (targetRole != null)
+            {
+                // Remove old store-related roles (StoreOwner, Manager, Staff) - keep SuperAdmin/Customer if present
+                var storeRoleNames = new[] { "StoreOwner", "Manager", "Staff" };
+                var rolesToRemove = user.Roles.Where(r => storeRoleNames.Contains(r.RoleName)).ToList();
+                
+                foreach (var role in rolesToRemove)
+                {
+                    user.Roles.Remove(role);
+                    Console.WriteLine($"[DEBUG] Removed old system role: {role.RoleName}");
+                }
+
+                // Add new role if not already present
+                if (!user.Roles.Any(r => r.RoleName == systemRoleName))
+                {
+                    user.Roles.Add(targetRole);
+                    Console.WriteLine($"[DEBUG] Added new system role: {systemRoleName}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG] Warning: System role '{systemRoleName}' not found in app_roles table");
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        Console.WriteLine($"[DEBUG] Role updated successfully! RoleInStore={dto.RoleInStore}, SystemRole={systemRoleName}");
+
+        return Ok(new { 
+            success = true, 
+            message = $"Role updated to {dto.RoleInStore} (system role: {systemRoleName})",
+            roleInStore = dto.RoleInStore,
+            systemRole = systemRoleName
+        });
     }
 }
 
@@ -105,4 +162,5 @@ public class UpdateRoleDto
     [System.Text.Json.Serialization.JsonPropertyName("roleInStore")]
     public string RoleInStore { get; set; } = null!;
 }
+
 
