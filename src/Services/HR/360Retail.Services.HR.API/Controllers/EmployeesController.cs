@@ -126,6 +126,69 @@ public class EmployeesController : ControllerBase
 
     #endregion
 
+    #region Manager/Owner APIs
+
+    /// <summary>
+    /// Get all employees in current store (for Manager/Owner)
+    /// </summary>
+    [Authorize(Roles = "Manager,Owner")]
+    [HttpGet]
+    public async Task<IActionResult> GetAllEmployees([FromQuery] bool includeInactive = false)
+    {
+        var storeId = GetStoreId();
+        if (storeId == null)
+            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+
+        var employees = await _employeeService.GetAllByStoreIdAsync(storeId.Value, includeInactive);
+        return Ok(new { success = true, data = employees });
+    }
+
+    /// <summary>
+    /// Get employee by ID in current store (for Manager/Owner)
+    /// </summary>
+    [Authorize(Roles = "Manager,Owner")]
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetEmployeeById(Guid id)
+    {
+        var storeId = GetStoreId();
+        if (storeId == null)
+            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+
+        var employee = await _employeeService.GetByIdAsync(id, storeId.Value);
+        if (employee == null)
+            return NotFound(new { success = false, message = "Employee not found in your store" });
+
+        return Ok(new { success = true, data = employee });
+    }
+
+    /// <summary>
+    /// Update employee information (OWNER ONLY)
+    /// Can update: FullName, Position, BaseSalary, Status
+    /// </summary>
+    [Authorize(Roles = "Owner")]
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> UpdateEmployee(Guid id, [FromBody] UpdateEmployeeByOwnerDto dto)
+    {
+        var storeId = GetStoreId();
+        if (storeId == null)
+            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+
+        try
+        {
+            var success = await _employeeService.UpdateByOwnerAsync(id, storeId.Value, dto);
+            if (!success)
+                return NotFound(new { success = false, message = "Employee not found in your store" });
+
+            return Ok(new { success = true, message = "Employee updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    #endregion
+
     #region Helpers
 
     private Guid? GetAppUserId()

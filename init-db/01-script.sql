@@ -431,3 +431,16 @@ ADD COLUMN IF NOT EXISTS registered_device_id VARCHAR(100);
 -- 18/1/2026: Add avatar_url column for employee avatars
 ALTER TABLE hr.employees
 ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- 19/1/2026: Change hr.employees from status (varchar) to is_active (boolean)
+-- Step 1: Add new column
+ALTER TABLE hr.employees
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+
+-- Step 2: Migrate existing data (status = 'Active' → is_active = true)
+UPDATE hr.employees
+SET is_active = CASE WHEN status = 'Active' THEN TRUE ELSE FALSE END
+WHERE is_active IS NULL OR status IS NOT NULL;
+
+-- Step 3: Drop old status column (optional - uncomment if you want to remove it)
+-- ALTER TABLE hr.employees DROP COLUMN IF EXISTS status;
