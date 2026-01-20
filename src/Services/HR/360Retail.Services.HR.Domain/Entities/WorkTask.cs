@@ -23,5 +23,14 @@ public partial class WorkTask
 
     public DateTime? CreatedAt { get; set; }
 
+    /// <summary>
+    /// Employee who created this task (for permission check)
+    /// </summary>
+    public Guid? CreatedByEmployeeId { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
     public virtual Employee Assignee { get; set; } = null!;
+    
+    public virtual Employee? CreatedBy { get; set; }
 }
