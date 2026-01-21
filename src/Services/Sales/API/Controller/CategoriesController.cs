@@ -1,4 +1,5 @@
 ﻿using _360Retail.Services.Sales.API.Wrappers; //  Wrapper 
+using _360Retail.Services.Sales.API.Filters;
 using _360Retail.Services.Sales.Application.DTOs;
 using _360Retail.Services.Sales.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace _360Retail.Services.Sales.API.Controllers
 {
+    [RequiresActiveSubscription]  // Block writes for expired trials
     public class CategoriesController : BaseApiController // Kế thừa Base
     {
         private readonly ICategoryService _categoryService;

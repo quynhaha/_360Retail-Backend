@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace _360Retail.Services.Identity.Domain.Entities;
 
@@ -25,8 +26,30 @@ public partial class AppUser
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Trial period fields
+    [Column("trial_start_date")]
+    public DateTime? TrialStartDate { get; set; }
+    
+    [Column("trial_end_date")]
+    public DateTime? TrialEndDate { get; set; }
+    
+    /// <summary>
+    /// Check if user is currently in active trial period
+    /// </summary>
+    [NotMapped]
+    public bool IsTrialActive => TrialEndDate.HasValue && TrialEndDate.Value > DateTime.UtcNow;
+    
+    /// <summary>
+    /// Days remaining in trial (0 if expired or not in trial)
+    /// </summary>
+    [NotMapped]
+    public int TrialDaysRemaining => TrialEndDate.HasValue 
+        ? Math.Max(0, (int)(TrialEndDate.Value - DateTime.UtcNow).TotalDays) 
+        : 0;
+
     public virtual ICollection<AppRole> Roles { get; set; } = new List<AppRole>();
 
     public virtual ICollection<UserStoreAccess> StoreAccesses { get; set; }
         = new List<UserStoreAccess>();
 }
+

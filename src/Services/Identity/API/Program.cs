@@ -29,6 +29,15 @@ builder.Services.AddHttpClient("HrService", client =>
     client.BaseAddress = new Uri(baseUrl);
 });
 
+// Named HttpClient for SaaS Service (for trial store creation)
+builder.Services.AddHttpClient("SaasService", client =>
+{
+    // Use service name 'saas-api' for Docker internal communication
+    // Fallback to localhost for local dev without Docker
+    var baseUrl = builder.Configuration["ServiceUrls:SaasService"] ?? "http://saas-api:8080"; 
+    client.BaseAddress = new Uri(baseUrl);
+});
+
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
 #endregion
 

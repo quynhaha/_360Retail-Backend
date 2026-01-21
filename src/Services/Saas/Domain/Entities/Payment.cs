@@ -20,6 +20,9 @@ public partial class Payment
 
     public DateTime? PaymentDate { get; set; }
 
+    [Column("user_id")]
+    public Guid? UserId { get; set; }
+
     public virtual Subscription Subscription { get; set; } = null!;
     public string? Provider { get; set; }
 
