@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using _360Retail.Services.Sales.API.Controllers; // BaseApiController
+using _360Retail.Services.Sales.API.Filters;
 using _360Retail.Services.Sales.Application.DTOs;
 using _360Retail.Services.Sales.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace _360Retail.Services.Sales.API.Controllers
 {
+    [RequiresActiveSubscription]  // Block writes for expired trials
     public class ProductsController : BaseApiController
     {
         private readonly IProductService _productService;

@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -19,30 +20,36 @@ public class AuthService : IAuthService
     private readonly IConfiguration _config;
     private readonly IEmailService _emailService;
     private readonly IPasswordHasher<AppUser> _passwordHasher;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public AuthService(
         IdentityDbContext db,
         IConfiguration config,
         IEmailService emailService,
-        IPasswordHasher<AppUser> passwordHasher
+        IPasswordHasher<AppUser> passwordHasher,
+        IHttpClientFactory httpClientFactory
     )
     {
         _db = db;
         _config = config;
         _emailService = emailService;
         _passwordHasher = passwordHasher;
+        _httpClientFactory = httpClientFactory;
     }
 
     // LOGIN
     public async Task<AuthResultDto> LoginAsync(LoginDto dto)
     {
+        // Allow login for Registered, Trial, and Active users
+        var validStatuses = new[] { "Registered", "Trial", "Active" };
+        
         var user = await _db.AppUsers
             .Include(u => u.StoreAccesses)
             .Include(u => u.Roles)
             .FirstOrDefaultAsync(u =>
                 u.Email == dto.Email &&
                 u.IsActivated &&
-                u.Status == "Active"
+                validStatuses.Contains(u.Status)
             );
 
         if (user == null)
@@ -68,7 +75,7 @@ public class AuthService : IAuthService
     }
 
 
-    // REGISTER (USER ONLY – NO STORE)
+    // REGISTER (Creates PotentialOwner - no trial yet, no store)
     public async Task RegisterAsync(RegisterUserDto dto)
     {
         if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email))
@@ -78,21 +85,30 @@ public class AuthService : IAuthService
         {
             Email = dto.Email,
             UserName = dto.Email,
-            Status = "Active",
+            Status = "Registered",  // Not trial yet, waiting for StartTrial
             IsActivated = true,
             MustChangePassword = false
         };
 
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
 
-        var ownerRole = await _db.AppRoles
-            .FirstAsync(r => r.RoleName == "StoreOwner");
+        // Assign PotentialOwner role (not StoreOwner yet)
+        var potentialOwnerRole = await _db.AppRoles
+            .FirstOrDefaultAsync(r => r.RoleName == "PotentialOwner");
+        
+        if (potentialOwnerRole == null)
+        {
+            // Create role if not exists (should be created by migration)
+            potentialOwnerRole = new AppRole { RoleName = "PotentialOwner" };
+            _db.AppRoles.Add(potentialOwnerRole);
+        }
 
-        user.Roles.Add(ownerRole);
+        user.Roles.Add(potentialOwnerRole);
 
         _db.AppUsers.Add(user);
         await _db.SaveChangesAsync();
     }
+
 
 
     public async Task AssignStoreAsync(Guid userId, AssignStoreDto dto)
@@ -178,6 +194,19 @@ public class AuthService : IAuthService
             new Claim("status", user.Status)
         };
 
+        // Add trial_expired claim for TrialCheckFilter middleware
+        if (user.Status == "Trial")
+        {
+            var isExpired = user.TrialEndDate.HasValue && user.TrialEndDate.Value <= DateTime.UtcNow;
+            claims.Add(new Claim("trial_expired", isExpired.ToString().ToLower()));
+            
+            if (user.TrialEndDate.HasValue)
+            {
+                claims.Add(new Claim("trial_end_date", user.TrialEndDate.Value.ToString("o")));
+                claims.Add(new Claim("trial_days_remaining", user.TrialDaysRemaining.ToString()));
+            }
+        }
+
         // System role
         foreach (var role in user.Roles)
         {
@@ -191,8 +220,11 @@ public class AuthService : IAuthService
         {
             claims.Add(new Claim("store_id", defaultAccess.StoreId.ToString()));
             claims.Add(new Claim("store_role", defaultAccess.RoleInStore));
-            // Map to standard Role claim so [Authorize(Roles="...")] works
-            claims.Add(new Claim(ClaimTypes.Role, defaultAccess.RoleInStore));
+            // Map RoleInStore to Role claim: "Owner" -> "StoreOwner" for controller compatibility
+            var mappedRole = defaultAccess.RoleInStore == "Owner" 
+                ? "StoreOwner" 
+                : defaultAccess.RoleInStore;
+            claims.Add(new Claim(ClaimTypes.Role, mappedRole));
         }
 
         var expireMinutes = GetJwtExpireMinutes();
@@ -270,4 +302,135 @@ public class AuthService : IAuthService
 
         await _db.SaveChangesAsync();
     }
+
+    // START TRIAL - Creates trial store and sets trial period
+    public async Task<StartTrialResultDto> StartTrialAsync(Guid userId, string? storeName)
+    {
+        var user = await _db.AppUsers
+            .Include(u => u.StoreAccesses)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+            throw new Exception("User not found");
+
+        // Check if user already has trial or active subscription
+        if (user.TrialStartDate.HasValue)
+            throw new Exception("Trial already started");
+
+        if (user.StoreAccesses.Any())
+            throw new Exception("User already has store access");
+
+        // Set trial period (7 days)
+        user.TrialStartDate = DateTime.UtcNow;
+        user.TrialEndDate = DateTime.UtcNow.AddDays(7);
+        user.Status = "Trial";
+
+        // Call SaaS service to create trial store
+        var saasClient = _httpClientFactory.CreateClient("SaasService");
+        var createStoreRequest = new
+        {
+            StoreName = storeName ?? $"Store của {user.Email}",
+            IsTrial = true
+        };
+
+        var response = await saasClient.PostAsJsonAsync("/api/stores/trial", createStoreRequest);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Failed to create trial store: {error}");
+        }
+
+        var storeResult = await response.Content.ReadFromJsonAsync<CreateTrialStoreResponse>();
+        
+        if (storeResult == null)
+            throw new Exception("Invalid response from SaaS service");
+
+        // Link user to store
+        _db.UserStoreAccess.Add(new Domain.Entities.UserStoreAccess
+        {
+            UserId = userId,
+            StoreId = storeResult.StoreId,
+            RoleInStore = "Owner",
+            IsDefault = true,
+            AssignedAt = DateTime.UtcNow
+        });
+
+        // Upgrade user role: PotentialOwner -> StoreOwner
+        // This ensures they have proper system-level permissions
+        var storeOwnerRole = await _db.AppRoles.FirstOrDefaultAsync(r => r.RoleName == "StoreOwner");
+        if (storeOwnerRole == null)
+        {
+            storeOwnerRole = new AppRole { RoleName = "StoreOwner" };
+            _db.AppRoles.Add(storeOwnerRole);
+        }
+
+        // Add StoreOwner role if not already present
+        // Need to reload roles since they weren't included in initial query
+        await _db.Entry(user).Collection(u => u.Roles).LoadAsync();
+        
+        if (!user.Roles.Any(r => r.RoleName == "StoreOwner"))
+        {
+            user.Roles.Add(storeOwnerRole);
+        }
+
+        // Remove PotentialOwner role (optional, keeps clean role assignment)
+        var potentialRole = user.Roles.FirstOrDefault(r => r.RoleName == "PotentialOwner");
+        if (potentialRole != null)
+        {
+            user.Roles.Remove(potentialRole);
+        }
+
+        await _db.SaveChangesAsync();
+
+        return new StartTrialResultDto(
+            storeResult.StoreId,
+            storeResult.StoreName,
+            user.TrialEndDate.Value,
+            7
+        );
+    }
+
+    // Helper class for SaaS response
+    private record CreateTrialStoreResponse(Guid StoreId, string StoreName);
+
+    // GET SUBSCRIPTION STATUS
+    public async Task<SubscriptionStatusDto> GetSubscriptionStatusAsync(Guid userId)
+    {
+        var user = await _db.AppUsers
+            .Include(u => u.StoreAccesses)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+            throw new Exception("User not found");
+
+        var defaultStore = user.StoreAccesses.FirstOrDefault(x => x.IsDefault);
+        
+        string status = user.Status;
+        int? daysRemaining = null;
+
+        if (user.Status == "Trial")
+        {
+            if (user.IsTrialActive)
+            {
+                daysRemaining = user.TrialDaysRemaining;
+            }
+            else
+            {
+                status = "Expired";
+                daysRemaining = 0;
+            }
+        }
+
+        return new SubscriptionStatusDto(
+            status,
+            defaultStore != null,
+            defaultStore?.StoreId,
+            user.TrialStartDate,
+            user.TrialEndDate,
+            daysRemaining,
+            user.Status == "Trial" ? "Trial" : null
+        );
+    }
 }
+

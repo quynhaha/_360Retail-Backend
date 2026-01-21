@@ -13,4 +13,10 @@ public interface IAuthService
     Task<AuthResultDto> RefreshAccessAsync(Guid userId, Guid? storeId);
 
     Task ChangePasswordAsync(Guid userId, ChangePasswordRequest dto);
+
+    // Trial methods
+    Task<StartTrialResultDto> StartTrialAsync(Guid userId, string? storeName);
+    
+    Task<SubscriptionStatusDto> GetSubscriptionStatusAsync(Guid userId);
 }
+

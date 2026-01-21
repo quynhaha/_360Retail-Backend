@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using _360Retail.Services.Sales.Application.DTOs;
 using _360Retail.Services.Sales.Application.Interfaces;
+using _360Retail.Services.Sales.API.Filters;
 
 namespace _360Retail.Services.Sales.API.Controllers;
 
 [Authorize(Roles = "StoreOwner,Manager,Staff,Customer")]
 [Route("api/sales/orders")]
+[RequiresActiveSubscription]  // Block writes for expired trials
 public class OrdersController : BaseApiController
 {
     private readonly IOrderService _orderService;

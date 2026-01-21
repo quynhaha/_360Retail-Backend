@@ -4,13 +4,15 @@ using System.Security.Claims;
 using _360Retail.Services.Saas.Application.DTOs.Stores;
 using _360Retail.Services.Saas.Application.Interfaces;
 using _360Retail.Services.Saas.Infrastructure.HttpClients;
+using _360Retail.Services.Saas.API.Filters;
 
 
 namespace _360Retail.Services.Saas.API.Controllers;
 
 [ApiController]
-[Route("api/saas/stores")]
+[Route("api/stores")]
 [Authorize]
+[RequiresActiveSubscription]  // Block writes for expired trials
 public class StoresController : ControllerBase
 {
     private readonly IStoreService _storeService;
@@ -24,11 +26,32 @@ public class StoresController : ControllerBase
         _identityClient = identityClient;
     }
 
+    // CREATE TRIAL STORE (called by Identity service during StartTrial)
+    [AllowAnonymous]  // Internal API - should be protected by API key in production
+    [HttpPost("trial")]
+    public async Task<IActionResult> CreateTrialStore([FromBody] CreateTrialStoreRequest request)
+    {
+        var store = await _storeService.CreateTrialStoreAsync(request.StoreName);
+        
+        return Ok(new 
+        { 
+            StoreId = store.Id, 
+            StoreName = store.StoreName 
+        });
+    }
+
     // CREATE
     [Authorize(Roles = "SuperAdmin,StoreOwner")]
     [HttpPost]
     public async Task<IActionResult> Create(CreateStoreDto dto)
     {
+        // Prevent Trial users from creating additional stores
+        var statusClaim = User.FindFirst("status")?.Value;
+        if (statusClaim == "Trial")
+        {
+             return BadRequest(new { message = "Trial accounts cannot create additional stores. Please upgrade your subscription." });
+        }
+
         var authHeader = Request.Headers["Authorization"].ToString();
         var accessToken = authHeader.Replace("Bearer ", "");
 
@@ -42,7 +65,7 @@ public class StoresController : ControllerBase
             dto
         );
 
-        if (roles.Contains("StoreOwner"))
+        if (roles.Contains("StoreOwner") || roles.Contains("PotentialOwner"))
         {
             await _identityClient.AssignStoreAsync(
                 accessToken,
@@ -52,6 +75,8 @@ public class StoresController : ControllerBase
 
         return Ok(store);
     }
+
+public record CreateTrialStoreRequest(string StoreName, bool IsTrial = true);
 
 
     // READ ALL

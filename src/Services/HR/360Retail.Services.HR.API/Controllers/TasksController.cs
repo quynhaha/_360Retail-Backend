@@ -1,5 +1,6 @@
 using _360Retail.Services.HR.Application.DTOs;
 using _360Retail.Services.HR.Application.Interfaces;
+using _360Retail.Services.HR.API.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -9,6 +10,7 @@ namespace _360Retail.Services.HR.API.Controllers;
 [ApiController]
 [Route("api/tasks")]
 [Authorize]
+[RequiresActiveSubscription]  // Block writes for expired trials
 public class TasksController : ControllerBase
 {
     private readonly ITaskService _taskService;

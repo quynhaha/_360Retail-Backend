@@ -458,4 +458,70 @@ WHERE is_active IS NULL;
 ALTER TABLE hr.tasks
 ADD COLUMN IF NOT EXISTS created_by_employee_id UUID REFERENCES hr.employees(id);
 
+-- 20/1/2026: Trial period support for Manual Trial Flow
+-- Add trial columns to identity.app_users
+ALTER TABLE identity.app_users 
+ADD COLUMN IF NOT EXISTS trial_start_date TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS trial_end_date TIMESTAMPTZ;
+
+-- Add index for trial expiry queries
+CREATE INDEX IF NOT EXISTS idx_users_trial_end 
+ON identity.app_users(trial_end_date);
+
+-- Add PotentialOwner role (user registered but not started trial yet)
+INSERT INTO identity.app_roles (id, role_name, description)
+VALUES (uuid_generate_v4(), 'PotentialOwner', 'User pending trial or subscription')
+ON CONFLICT DO NOTHING;
+
+-- Add Trial service plan for trial subscriptions
+INSERT INTO saas.service_plans (id, plan_name, price, duration_days, features, is_active)
+SELECT 
+    uuid_generate_v4(), 
+    'Trial', 
+    0, 
+    7, 
+    '{"products": -1, "orders": -1, "employees": 3, "trial": true}'::jsonb, 
+    TRUE
+WHERE NOT EXISTS (SELECT 1 FROM saas.service_plans WHERE plan_name = 'Trial');
+
+-- 20/1/2026: Add paid service plans for subscription purchase
+-- Basic Plan - 199,000 VND / 30 days
+INSERT INTO saas.service_plans (id, plan_name, price, duration_days, features, is_active, created_at)
+SELECT 
+    uuid_generate_v4(), 
+    'Basic', 
+    199000, 
+    30, 
+    '{"max_products": 100, "max_employees": 5, "max_orders": 500}'::jsonb, 
+    TRUE,
+    NOW()
+WHERE NOT EXISTS (SELECT 1 FROM saas.service_plans WHERE plan_name = 'Basic');
+
+-- Pro Plan - 499,000 VND / 30 days
+INSERT INTO saas.service_plans (id, plan_name, price, duration_days, features, is_active, created_at)
+SELECT 
+    uuid_generate_v4(), 
+    'Pro', 
+    499000, 
+    30, 
+    '{"max_products": 500, "max_employees": 20, "max_orders": 2000}'::jsonb, 
+    TRUE,
+    NOW()
+WHERE NOT EXISTS (SELECT 1 FROM saas.service_plans WHERE plan_name = 'Pro');
+
+-- Yearly Plan - 1,990,000 VND / 365 days (save 2 months)
+INSERT INTO saas.service_plans (id, plan_name, price, duration_days, features, is_active, created_at)
+SELECT 
+    uuid_generate_v4(), 
+    'Yearly', 
+    1990000, 
+    365, 
+    '{"max_products": 1000, "max_employees": 50, "max_orders": -1}'::jsonb, 
+    TRUE,
+    NOW()
+WHERE NOT EXISTS (SELECT 1 FROM saas.service_plans WHERE plan_name = 'Yearly');
+
+-- 21/1/2026: Add user_id to payments for tracking who made the payment
+ALTER TABLE saas.payments
+ADD COLUMN IF NOT EXISTS user_id UUID NULL;
 
