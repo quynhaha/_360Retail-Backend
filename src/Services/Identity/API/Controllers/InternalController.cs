@@ -155,6 +155,54 @@ public class InternalController : ControllerBase
             systemRole = systemRoleName
         });
     }
+
+    /// <summary>
+    /// Update user status after successful subscription payment
+    /// Called by Saas service when payment is confirmed
+    /// </summary>
+    [HttpPut("users/{userId}/activate-subscription")]
+    public async Task<IActionResult> ActivateUserSubscription(Guid userId)
+    {
+        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == userId);
+        
+        if (user == null)
+            return NotFound(new { success = false, message = "User not found" });
+
+        // Update status from Trial to Active
+        user.Status = "Active";
+        
+        // Clear trial dates since they now have active subscription
+        // Keep TrialStartDate for historical purposes
+        
+        await _db.SaveChangesAsync();
+
+        return Ok(new { 
+            success = true, 
+            message = "User subscription activated successfully",
+            status = user.Status
+        });
+    }
+
+    /// <summary>
+    /// Get user subscription status (for Saas service to check)
+    /// </summary>
+    [HttpGet("users/{userId}/subscription-status")]
+    public async Task<IActionResult> GetUserSubscriptionStatus(Guid userId)
+    {
+        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == userId);
+        
+        if (user == null)
+            return NotFound(new { success = false, message = "User not found" });
+
+        return Ok(new { 
+            success = true,
+            userId = user.Id,
+            status = user.Status,
+            trialStartDate = user.TrialStartDate,
+            trialEndDate = user.TrialEndDate,
+            isTrialExpired = user.Status == "Trial" && user.TrialEndDate.HasValue && user.TrialEndDate.Value <= DateTime.UtcNow
+        });
+    }
 }
 
 public class UpdateRoleDto
@@ -162,5 +210,4 @@ public class UpdateRoleDto
     [System.Text.Json.Serialization.JsonPropertyName("roleInStore")]
     public string RoleInStore { get; set; } = null!;
 }
-
 

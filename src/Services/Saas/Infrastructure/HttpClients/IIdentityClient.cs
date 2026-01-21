@@ -5,6 +5,12 @@ public interface IIdentityClient
     Task AssignStoreAsync(string accessToken, Guid storeId);
     Task<bool> HasStoreAccessAsync(string accessToken, Guid storeId, string roleInStore);
     Task<List<UserStoreAccessDto>> GetMyStoresAsync(string accessToken);
+    
+    /// <summary>
+    /// Activate user subscription after successful payment
+    /// Updates user status from Trial to Active
+    /// </summary>
+    Task<bool> ActivateUserSubscriptionAsync(Guid userId);
 }
 
 public class UserStoreAccessDto

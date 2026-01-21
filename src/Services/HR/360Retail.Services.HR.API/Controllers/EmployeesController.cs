@@ -1,5 +1,6 @@
 using _360Retail.Services.HR.Application.DTOs;
 using _360Retail.Services.HR.Application.Interfaces;
+using _360Retail.Services.HR.API.Filters;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -8,6 +9,7 @@ namespace _360Retail.Services.HR.API.Controllers;
 
 [ApiController]
 [Route("api/employees")]
+[RequiresActiveSubscription]  // Block writes for expired trials
 public class EmployeesController : ControllerBase
 {
     private readonly IEmployeeService _employeeService;
@@ -131,7 +133,7 @@ public class EmployeesController : ControllerBase
     /// <summary>
     /// Get all employees in current store (for Manager/Owner)
     /// </summary>
-    [Authorize(Roles = "Manager,Owner")]
+    [Authorize(Roles = "Manager,StoreOwner,Owner")]
     [HttpGet]
     public async Task<IActionResult> GetAllEmployees([FromQuery] bool includeInactive = false)
     {
@@ -146,7 +148,7 @@ public class EmployeesController : ControllerBase
     /// <summary>
     /// Get employee by ID in current store (for Manager/Owner)
     /// </summary>
-    [Authorize(Roles = "Manager,Owner")]
+    [Authorize(Roles = "Manager,StoreOwner,Owner")]
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetEmployeeById(Guid id)
     {
@@ -165,7 +167,7 @@ public class EmployeesController : ControllerBase
     /// Update employee information (OWNER ONLY)
     /// Can update: FullName, Position, BaseSalary, Status
     /// </summary>
-    [Authorize(Roles = "Owner")]
+    [Authorize(Roles = "StoreOwner,Owner")]
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateEmployee(Guid id, [FromBody] UpdateEmployeeByOwnerDto dto)
     {

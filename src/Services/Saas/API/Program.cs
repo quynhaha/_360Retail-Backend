@@ -6,6 +6,7 @@ using System.Text;
 using _360Retail.Services.Saas.Infrastructure.Persistence;
 using _360Retail.Services.Saas.Application.Interfaces;
 using _360Retail.Services.Saas.Infrastructure.Services;
+using _360Retail.Services.Saas.API.Services;
 using Microsoft.OpenApi.Models;
 using _360Retail.Services.Saas.Infrastructure.HttpClients;
 
@@ -67,6 +68,9 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
 
 // DI
 builder.Services.AddScoped<IStoreService, StoreService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddSingleton<VNPayService>();
+
 // HTTP Client -> Identity Service
 var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] 
     ?? "http://localhost:5297";

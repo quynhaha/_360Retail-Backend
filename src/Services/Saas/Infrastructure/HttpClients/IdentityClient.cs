@@ -67,4 +67,15 @@ public class IdentityClient : IIdentityClient
         return await response.Content.ReadFromJsonAsync<List<UserStoreAccessDto>>()
             ?? new List<UserStoreAccessDto>();
     }
+
+    public async Task<bool> ActivateUserSubscriptionAsync(Guid userId)
+    {
+        // Internal API - no auth header needed (service-to-service)
+        var response = await _http.PutAsync(
+            $"/identity/internal/users/{userId}/activate-subscription",
+            null
+        );
+
+        return response.IsSuccessStatusCode;
+    }
 }

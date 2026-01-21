@@ -34,6 +34,43 @@ public class StoreService : IStoreService
         return MapToDto(store);
     }
 
+    // CREATE TRIAL STORE (with trial subscription)
+    public async Task<Store> CreateTrialStoreAsync(string storeName)
+    {
+        var store = new Store
+        {
+            Id = Guid.NewGuid(),
+            StoreName = storeName,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.Stores.Add(store);
+
+        // Find or create Trial plan
+        var trialPlan = await _db.ServicePlans.FirstOrDefaultAsync(p => p.PlanName == "Trial");
+        
+        if (trialPlan != null)
+        {
+            // Create trial subscription
+            var subscription = new Subscription
+            {
+                Id = Guid.NewGuid(),
+                StoreId = store.Id,
+                PlanId = trialPlan.Id,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddDays(7),
+                Status = "Trial",
+                AutoRenew = false
+            };
+            _db.Subscriptions.Add(subscription);
+        }
+
+        await _db.SaveChangesAsync();
+
+        return store;
+    }
+
     // READ ONE
     public async Task<StoreResponseDto?> GetByIdAsync(Guid storeId, bool includeInactive = false)
     {
