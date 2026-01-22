@@ -40,16 +40,27 @@ public class StoresController : ControllerBase
         });
     }
 
-    // CREATE
+    // CREATE (for paid users - requires subscription purchase)
     [Authorize(Roles = "SuperAdmin,StoreOwner")]
     [HttpPost]
-    public async Task<IActionResult> Create(CreateStoreDto dto)
+    public async Task<IActionResult> Create([FromBody] CreateStoreDto dto)
     {
         // Prevent Trial users from creating additional stores
         var statusClaim = User.FindFirst("status")?.Value;
         if (statusClaim == "Trial")
         {
              return BadRequest(new { message = "Trial accounts cannot create additional stores. Please upgrade your subscription." });
+        }
+
+        // Active (paid) users must provide a PlanId to purchase subscription for new store
+        if (statusClaim == "Active" && !dto.PlanId.HasValue)
+        {
+            return BadRequest(new { 
+                success = false,
+                message = "Vui lòng chọn gói dịch vụ cho store mới.",
+                message_en = "Please select a service plan for the new store.",
+                requiresPlan = true
+            });
         }
 
         var authHeader = Request.Headers["Authorization"].ToString();
@@ -60,24 +71,65 @@ public class StoresController : ControllerBase
                         .Select(r => r.Value)
                         .ToList();
 
-        var store = await _storeService.CreateAsync(
-            Guid.Parse(userId),
-            dto
-        );
-
-        if (roles.Contains("StoreOwner") || roles.Contains("PotentialOwner"))
+        try
         {
-            await _identityClient.AssignStoreAsync(
-                accessToken,
-                store.Id
+            // Create store with pending subscription (if PlanId provided)
+            var result = await _storeService.CreateWithSubscriptionAsync(
+                Guid.Parse(userId!),
+                dto
             );
-        }
 
-        return Ok(store);
+            // Assign store to owner in Identity service
+            if (roles.Contains("StoreOwner") || roles.Contains("PotentialOwner"))
+            {
+                await _identityClient.AssignStoreAsync(
+                    accessToken,
+                    result.Store.Id
+                );
+            }
+
+            // If subscription was created, return payment URL
+            if (result.PaymentUrl != null)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    store = result.Store,
+                    payment = new
+                    {
+                        paymentId = result.PaymentId,
+                        paymentUrl = result.PaymentUrl,
+                        amount = result.Amount,
+                        planName = result.PlanName
+                    },
+                    message = "Store đã được tạo. Vui lòng thanh toán để kích hoạt.",
+                    message_en = "Store created. Please complete payment to activate."
+                });
+            }
+
+            return Ok(new { success = true, store = result.Store });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
     }
 
 public record CreateTrialStoreRequest(string StoreName, bool IsTrial = true);
 
+
+    // CHECK STORE ACTIVE STATUS (internal API for Identity service)
+    [AllowAnonymous]  // Internal service-to-service call
+    [HttpGet("{storeId:guid}/active-status")]
+    public async Task<IActionResult> GetStoreActiveStatus(Guid storeId)
+    {
+        var store = await _storeService.GetByIdAsync(storeId, includeInactive: true);
+        
+        if (store == null)
+            return NotFound(new { isActive = false });
+
+        return Ok(new { isActive = store.IsActive });
+    }
 
     // READ ALL
     [Authorize(Roles = "SuperAdmin")]

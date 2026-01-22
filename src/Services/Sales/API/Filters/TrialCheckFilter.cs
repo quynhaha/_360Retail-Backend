@@ -43,6 +43,26 @@ public class TrialCheckFilter : IAsyncActionFilter
             }
         }
 
+        // If status is "Active" (Paid user), check if subscription has expired
+        if (statusClaim == "Active")
+        {
+            var subscriptionExpiredClaim = context.HttpContext.User.FindFirst("subscription_expired")?.Value;
+            
+            if (subscriptionExpiredClaim == "true")
+            {
+                context.Result = new ObjectResult(new
+                {
+                    success = false,
+                    error = "SubscriptionExpired",
+                    message = "Gói dịch vụ của bạn đã hết hạn. Vui lòng gia hạn để tiếp tục sử dụng."
+                })
+                {
+                    StatusCode = 403
+                };
+                return;
+            }
+        }
+
         await next();
     }
 }

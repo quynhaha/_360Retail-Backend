@@ -21,7 +21,7 @@ public class IdentityClient : IIdentityClient
         {
             storeId = storeId,
             roleInStore = "Owner",
-            isDefault = true
+            isDefault = false  // User must manually switch to new store
         };
 
         var res = await _http.PostAsJsonAsync(
