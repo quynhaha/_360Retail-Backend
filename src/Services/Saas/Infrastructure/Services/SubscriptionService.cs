@@ -108,6 +108,8 @@ public class SubscriptionService : ISubscriptionService
         var payment = await _db.Payments
             .Include(p => p.Subscription)
             .ThenInclude(s => s.Plan)
+            .Include(p => p.Subscription)
+            .ThenInclude(s => s.Store)
             .FirstOrDefaultAsync(p => p.Id == paymentId);
 
         if (payment == null)
@@ -123,6 +125,12 @@ public class SubscriptionService : ISubscriptionService
         subscription.Status = "Active";
         subscription.StartDate = DateTime.UtcNow;
         subscription.EndDate = DateTime.UtcNow.AddDays(subscription.Plan.DurationDays);
+
+        // Activate store (important for newly created stores with pending subscription)
+        if (subscription.Store != null && !subscription.Store.IsActive)
+        {
+            subscription.Store.IsActive = true;
+        }
 
         await _db.SaveChangesAsync();
 
@@ -145,5 +153,27 @@ public class SubscriptionService : ISubscriptionService
         await _db.SaveChangesAsync();
 
         return true;
+    }
+
+    public async Task<Payment?> GetPaymentByIdAsync(Guid paymentId)
+    {
+        return await _db.Payments.FirstOrDefaultAsync(p => p.Id == paymentId);
+    }
+
+    public async Task<PaymentPlanInfo?> GetPaymentPlanInfoAsync(Guid paymentId)
+    {
+        var payment = await _db.Payments
+            .Include(p => p.Subscription)
+            .ThenInclude(s => s.Plan)
+            .FirstOrDefaultAsync(p => p.Id == paymentId);
+
+        if (payment?.Subscription?.Plan == null)
+            return null;
+
+        return new PaymentPlanInfo(
+            payment.Subscription.Plan.PlanName,
+            payment.Subscription.Plan.Price,
+            payment.Subscription.Plan.DurationDays
+        );
     }
 }
