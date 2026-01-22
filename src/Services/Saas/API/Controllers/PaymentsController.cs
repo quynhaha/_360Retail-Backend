@@ -28,6 +28,51 @@ public class PaymentsController : ControllerBase
     }
 
     /// <summary>
+    /// Initiate payment for an existing pending payment (e.g., new store subscription)
+    /// Returns payment URL for client to redirect
+    /// </summary>
+    [HttpGet("initiate")]
+    public async Task<IActionResult> InitiatePayment([FromQuery] Guid paymentId)
+    {
+        var payment = await _subscriptionService.GetPaymentByIdAsync(paymentId);
+        
+        if (payment == null)
+            return NotFound(new { success = false, message = "Payment not found" });
+
+        if (payment.Status != "Pending")
+            return BadRequest(new { success = false, message = "Payment is not in pending status" });
+
+        // Get plan info
+        var planInfo = await _subscriptionService.GetPaymentPlanInfoAsync(paymentId);
+        
+        // Build return URL from VNPay config
+        var returnUrl = _config["VNPay:ReturnUrl"] ?? "http://localhost:5001/api/payments/vnpay-return";
+
+        // Get client IP
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
+        // Create VNPay payment URL
+        var orderInfo = $"Thanh toan goi {planInfo?.PlanName ?? "360Retail"} - 360Retail";
+        var paymentUrl = _vnpayService.CreatePaymentUrl(
+            payment.Id,
+            payment.Amount,
+            orderInfo,
+            returnUrl,
+            ipAddress
+        );
+
+        // Return payment URL for client to redirect (same as purchase endpoint)
+        return Ok(new
+        {
+            success = true,
+            paymentId = payment.Id,
+            paymentUrl = paymentUrl,
+            amount = payment.Amount,
+            planName = planInfo?.PlanName
+        });
+    }
+
+    /// <summary>
     /// VNPay return URL - User is redirected here after payment
     /// </summary>
     [HttpGet("vnpay-return")]

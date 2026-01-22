@@ -34,6 +34,76 @@ public class StoreService : IStoreService
         return MapToDto(store);
     }
 
+    // CREATE WITH SUBSCRIPTION (for paid users creating new stores)
+    public async Task<CreateStoreWithSubscriptionResult> CreateWithSubscriptionAsync(Guid ownerUserId, CreateStoreDto dto)
+    {
+        // Create the store first
+        var store = new Store
+        {
+            Id = Guid.NewGuid(),
+            StoreName = dto.StoreName,
+            Address = dto.Address,
+            Phone = dto.Phone,
+            IsActive = false,  // Inactive until subscription is paid
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.Stores.Add(store);
+
+        // If PlanId is provided, create pending subscription
+        if (dto.PlanId.HasValue)
+        {
+            var plan = await _db.ServicePlans.FindAsync(dto.PlanId.Value);
+            if (plan == null)
+                throw new Exception("Service plan not found");
+
+            if (plan.IsActive != true)
+                throw new Exception("This plan is not available");
+
+            // Create pending subscription
+            var subscription = new Subscription
+            {
+                Id = Guid.NewGuid(),
+                StoreId = store.Id,
+                PlanId = dto.PlanId.Value,
+                Status = "Pending",
+                AutoRenew = false
+            };
+
+            _db.Subscriptions.Add(subscription);
+
+            // Create pending payment
+            var payment = new Payment
+            {
+                Id = Guid.NewGuid(),
+                SubscriptionId = subscription.Id,
+                Amount = plan.Price,
+                PaymentMethod = "VNPay",
+                Status = "Pending",
+                Provider = "VNPay",
+                PaymentDate = DateTime.UtcNow,
+                UserId = ownerUserId
+            };
+
+            _db.Payments.Add(payment);
+            await _db.SaveChangesAsync();
+
+            // Build VNPay payment URL (simplified - actual URL building done by VNPayService)
+            var paymentUrl = $"/api/payments/initiate?paymentId={payment.Id}";
+
+            return new CreateStoreWithSubscriptionResult(
+                MapToDto(store),
+                paymentUrl,
+                payment.Id,
+                plan.Price,
+                plan.PlanName
+            );
+        }
+
+        await _db.SaveChangesAsync();
+        return new CreateStoreWithSubscriptionResult(MapToDto(store));
+    }
+
     // CREATE TRIAL STORE (with trial subscription)
     public async Task<Store> CreateTrialStoreAsync(string storeName)
     {

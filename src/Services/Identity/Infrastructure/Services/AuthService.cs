@@ -64,7 +64,7 @@ public class AuthService : IAuthService
         if (verifyResult == PasswordVerificationResult.Failed)
             throw new Exception("Invalid email or password");
 
-        var token = GenerateJwtToken(user);
+        var token = await GenerateJwtTokenAsync(user);
         var expireMinutes = GetJwtExpireMinutes();
 
         return new AuthResultDto(
@@ -158,6 +158,11 @@ public class AuthService : IAuthService
             if (targetAccess == null)
                 throw new Exception("Access denied to this store");
 
+            // Check if store is active (paid) by calling SaaS service
+            var isStoreActive = await CheckStoreActiveAsync(storeId.Value);
+            if (!isStoreActive)
+                throw new Exception("Store is not active. Please complete payment to access this store.");
+
             // Update IsDefault in DB for next logins
             foreach (var access in user.StoreAccesses) access.IsDefault = false;
             targetAccess.IsDefault = true;
@@ -165,14 +170,14 @@ public class AuthService : IAuthService
         }
 
         // Generate new token
-        var newLinkToken = GenerateJwtToken(user);
+        var newLinkToken = await GenerateJwtTokenAsync(user);
         var expireMinutes = GetJwtExpireMinutes();
 
         return new AuthResultDto(newLinkToken, DateTime.UtcNow.AddMinutes(expireMinutes), user.MustChangePassword);
     }
 
     // JWT
-    private string GenerateJwtToken(AppUser user)
+    private async Task<string> GenerateJwtTokenAsync(AppUser user)
     {
         var jwtSettings = _config.GetSection("JwtSettings");
 
@@ -225,6 +230,13 @@ public class AuthService : IAuthService
                 ? "StoreOwner" 
                 : defaultAccess.RoleInStore;
             claims.Add(new Claim(ClaimTypes.Role, mappedRole));
+
+            // Check subscription expiry for Active users (Paid users)
+            if (user.Status == "Active")
+            {
+                var subscriptionExpired = await CheckSubscriptionExpiredAsync(defaultAccess.StoreId);
+                claims.Add(new Claim("subscription_expired", subscriptionExpired.ToString().ToLower()));
+            }
         }
 
         var expireMinutes = GetJwtExpireMinutes();
@@ -248,6 +260,83 @@ public class AuthService : IAuthService
 
         return minutes;
     }
+
+    /// <summary>
+    /// Check if store's subscription has expired by calling SaaS service
+    /// </summary>
+    private async Task<bool> CheckSubscriptionExpiredAsync(Guid storeId)
+    {
+        try
+        {
+            var saasClient = _httpClientFactory.CreateClient("SaasService");
+            var response = await saasClient.GetAsync($"/api/subscriptions/store/{storeId}/status");
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                // If we can't reach SaaS service, assume not expired (fail-open for better UX)
+                return false;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<SubscriptionStatusResponse>();
+            
+            if (result == null || result.Status == "NoSubscription")
+            {
+                // No subscription means expired/not active
+                return true;
+            }
+
+            // Check if subscription end date has passed
+            if (result.EndDate.HasValue && result.EndDate.Value <= DateTime.UtcNow)
+            {
+                return true;
+            }
+
+            return result.Status != "Active";
+        }
+        catch
+        {
+            // On error, fail-open to avoid blocking users due to service issues
+            return false;
+        }
+    }
+
+    private record SubscriptionStatusResponse(
+        Guid? Id,
+        string? PlanName,
+        decimal? Price,
+        DateTime? StartDate,
+        DateTime? EndDate,
+        string Status,
+        int? DaysRemaining
+    );
+
+    /// <summary>
+    /// Check if store is active (paid) by calling SaaS service
+    /// </summary>
+    private async Task<bool> CheckStoreActiveAsync(Guid storeId)
+    {
+        try
+        {
+            var saasClient = _httpClientFactory.CreateClient("SaasService");
+            var response = await saasClient.GetAsync($"/api/stores/{storeId}/active-status");
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                // If we can't reach SaaS service, fail-closed for security (block access)
+                return false;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<StoreActiveResponse>();
+            return result?.IsActive ?? false;
+        }
+        catch
+        {
+            // On error, fail-closed for security
+            return false;
+        }
+    }
+
+    private record StoreActiveResponse(bool IsActive);
 
     // PASSWORD
     private static string HashPassword(string password)
