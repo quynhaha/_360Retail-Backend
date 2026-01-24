@@ -53,11 +53,11 @@ public partial class HrDbContext : DbContext
             entity.Property(e => e.RegisteredDeviceId)
                 .HasMaxLength(100)
                 .HasColumnName("registered_device_id");
-            entity.Property(e => e.Status)
-                .HasMaxLength(50)
-                .HasDefaultValueSql("'Active'::character varying")
-                .HasColumnName("status");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
             entity.Property(e => e.StoreId).HasColumnName("store_id");
+            entity.Property(e => e.AvatarUrl).HasColumnName("avatar_url");
         });
 
         modelBuilder.Entity<WorkTask>(entity =>
@@ -88,11 +88,22 @@ public partial class HrDbContext : DbContext
             entity.Property(e => e.Title)
                 .HasMaxLength(200)
                 .HasColumnName("title");
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasColumnName("is_active");
+            entity.Property(e => e.CreatedByEmployeeId)
+                .HasColumnName("created_by_employee_id");
 
             entity.HasOne(d => d.Assignee).WithMany(p => p.Tasks)
                 .HasForeignKey(d => d.AssigneeId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("tasks_assignee_id_fkey");
+            
+            entity.HasOne(d => d.CreatedBy)
+                .WithMany()
+                .HasForeignKey(d => d.CreatedByEmployeeId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("tasks_created_by_employee_id_fkey");
         });
 
         modelBuilder.Entity<Timekeeping>(entity =>

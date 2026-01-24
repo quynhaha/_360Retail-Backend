@@ -1,17 +1,19 @@
-﻿using System.Text;
+﻿using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
+using _360Retail.Services.Identity.Domain.Entities;
+using _360Retail.Services.Identity.Infrastructure.Persistence;
+using _360Retail.Services.Identity.Infrastructure.Services;
+using _360Retail.Services.Identity.Infrastructure.Services.Email;
+using _360Retail.Services.Identity.Infrastructure.Services.Invitations;
+using _360Retail.Services.Identity.Infrastructure.Services.SuperAdmin;
+using _360Retail.Services.Identity.Infrastructure.Services.UserStoreAccess;
+using _360Retail.Services.Saas.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-
-using _360Retail.Services.Identity.Application.Interfaces;
-using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
-using _360Retail.Services.Identity.Domain.Entities;
-using _360Retail.Services.Identity.Infrastructure.Email;
-using _360Retail.Services.Identity.Infrastructure.Persistence;
-using _360Retail.Services.Identity.Infrastructure.Services;
-using _360Retail.Services.Identity.Infrastructure.Services.SuperAdmin;
-using _360Retail.Services.Saas.Infrastructure.Persistence;
+using System.Text;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -19,6 +21,23 @@ var builder = WebApplication.CreateBuilder(args);
 
 #region ===== HTTP & EMAIL =====
 builder.Services.AddHttpClient();
+
+// Named HttpClient for HR Service
+builder.Services.AddHttpClient("HrService", client =>
+{
+    var baseUrl = builder.Configuration["ServiceUrls:HrService"] ?? "http://localhost:5280";
+    client.BaseAddress = new Uri(baseUrl);
+});
+
+// Named HttpClient for SaaS Service (for trial store creation)
+builder.Services.AddHttpClient("SaasService", client =>
+{
+    // Use service name 'saas-api' for Docker internal communication
+    // Fallback to localhost for local dev without Docker
+    var baseUrl = builder.Configuration["ServiceUrls:SaasService"] ?? "http://saas-api:8080"; 
+    client.BaseAddress = new Uri(baseUrl);
+});
+
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
 #endregion
 
@@ -35,6 +54,10 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddScoped<ISuperAdminUserService, SuperAdminUserService>();
+
+builder.Services.AddScoped<IUserInvitationService, UserInvitationService>();
+builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
+builder.Services.AddScoped<IUserStoreAccessService, UserStoreAccessService>();
 
 #endregion
 
@@ -103,6 +126,19 @@ builder.Services.AddSwaggerGen(option =>
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:4200")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+});
+
 var app = builder.Build();
 
 #region ===== MIDDLEWARE =====
@@ -110,9 +146,13 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    
+    // Auto redirect / to /swagger
+    app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();

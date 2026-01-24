@@ -23,7 +23,9 @@ public partial class Employee
 
     public DateTime? JoinDate { get; set; }
 
-    public string? Status { get; set; }
+    public bool IsActive { get; set; } = true;
+
+    public string? AvatarUrl { get; set; }
 
     public virtual ICollection<WorkTask> Tasks { get; set; } = new List<WorkTask>();
 

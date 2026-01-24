@@ -22,16 +22,18 @@ namespace _360Retail.Services.Sales.API.Controllers
             return BadRequest(response);
         }
 
-        // Helper lấy thông tin User đang đăng nhập từ Token (Tech Lead trick)
+        // Helper lấy thông tin User đang đăng nhập từ Token
         protected Guid GetCurrentUserId()
         {
-            var userId = User.FindFirst("id")?.Value; // "id" là claim ta đã lưu lúc Login
+            var userId = User.FindFirst("id")?.Value;
+            if (string.IsNullOrEmpty(userId)) userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
             return userId != null ? Guid.Parse(userId) : Guid.Empty;
         }
 
         protected Guid GetCurrentStoreId()
         {
-            var storeId = User.FindFirst("StoreId")?.Value;
+            var storeId = User.FindFirst("store_id")?.Value;
             return storeId != null ? Guid.Parse(storeId) : Guid.Empty;
         }
     }

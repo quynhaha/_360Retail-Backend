@@ -6,13 +6,28 @@ using System.Text;
 using _360Retail.Services.Saas.Infrastructure.Persistence;
 using _360Retail.Services.Saas.Application.Interfaces;
 using _360Retail.Services.Saas.Infrastructure.Services;
+using _360Retail.Services.Saas.API.Services;
 using Microsoft.OpenApi.Models;
+using _360Retail.Services.Saas.Infrastructure.HttpClients;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// Add CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:4200")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+});
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "360Retail Saas API", Version = "v1" });
@@ -53,6 +68,16 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
 
 // DI
 builder.Services.AddScoped<IStoreService, StoreService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddSingleton<VNPayService>();
+
+// HTTP Client -> Identity Service
+var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] 
+    ?? "http://localhost:5297";
+builder.Services.AddHttpClient<IIdentityClient, IdentityClient>(client =>
+{
+    client.BaseAddress = new Uri(identityServiceUrl);
+});
 
 // Authentication (JWT)
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
@@ -98,6 +123,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();

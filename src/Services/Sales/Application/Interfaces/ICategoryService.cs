@@ -9,9 +9,10 @@ namespace _360Retail.Services.Sales.Application.Interfaces
 {
     public interface ICategoryService
     {
-        Task<List<CategoryDto>> GetAllAsync();
+        Task<List<CategoryDto>> GetAllAsync(Guid storeId, bool includeInactive = false);
         Task<CategoryDto> CreateAsync(CreateCategoryDto request, Guid storeId);
-        Task UpdateAsync(UpdateCategoryDto request);
-        Task DeleteAsync(Guid id);
+        Task UpdateAsync(UpdateCategoryDto request, Guid storeId);
+        Task DeleteAsync(Guid id, Guid storeId);
     }
 }
+

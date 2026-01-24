@@ -1,14 +1,16 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.Configuration;
-using _360Retail.Services.Identity.Application.DTOs;
+﻿using _360Retail.Services.Identity.Application.DTOs;
 using _360Retail.Services.Identity.Application.Interfaces;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace _360Retail.Services.Identity.Infrastructure.Services;
 
@@ -17,44 +19,63 @@ public class AuthService : IAuthService
     private readonly IdentityDbContext _db;
     private readonly IConfiguration _config;
     private readonly IEmailService _emailService;
+    private readonly IPasswordHasher<AppUser> _passwordHasher;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public AuthService(
         IdentityDbContext db,
         IConfiguration config,
-        IEmailService emailService
+        IEmailService emailService,
+        IPasswordHasher<AppUser> passwordHasher,
+        IHttpClientFactory httpClientFactory
     )
     {
         _db = db;
         _config = config;
         _emailService = emailService;
+        _passwordHasher = passwordHasher;
+        _httpClientFactory = httpClientFactory;
     }
 
     // LOGIN
     public async Task<AuthResultDto> LoginAsync(LoginDto dto)
     {
+        // Allow login for Registered, Trial, and Active users
+        var validStatuses = new[] { "Registered", "Trial", "Active" };
+        
         var user = await _db.AppUsers
             .Include(u => u.StoreAccesses)
             .Include(u => u.Roles)
             .FirstOrDefaultAsync(u =>
                 u.Email == dto.Email &&
                 u.IsActivated &&
-                u.Status == "Active"
+                validStatuses.Contains(u.Status)
             );
 
-        if (user == null || !VerifyPassword(dto.Password, user.PasswordHash))
+        if (user == null)
             throw new Exception("Invalid email or password");
 
-        var token = GenerateJwtToken(user);
+        var verifyResult = _passwordHasher.VerifyHashedPassword(
+            user,
+            user.PasswordHash,
+            dto.Password
+        );
 
+        if (verifyResult == PasswordVerificationResult.Failed)
+            throw new Exception("Invalid email or password");
+
+        var token = await GenerateJwtTokenAsync(user);
         var expireMinutes = GetJwtExpireMinutes();
 
         return new AuthResultDto(
             token,
-            DateTime.UtcNow.AddMinutes(expireMinutes)
+            DateTime.UtcNow.AddMinutes(expireMinutes),
+            user.MustChangePassword
         );
     }
 
-    // REGISTER (USER ONLY – NO STORE)
+
+    // REGISTER (Creates PotentialOwner - no trial yet, no store)
     public async Task RegisterAsync(RegisterUserDto dto)
     {
         if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email))
@@ -64,81 +85,99 @@ public class AuthService : IAuthService
         {
             Email = dto.Email,
             UserName = dto.Email,
-            PasswordHash = HashPassword(dto.Password),
-            Status = "Active",
-            IsActivated = true
+            Status = "Registered",  // Not trial yet, waiting for StartTrial
+            IsActivated = true,
+            MustChangePassword = false
         };
-        var ownerRole = await _db.AppRoles
-        .FirstAsync(r => r.RoleName == "StoreOwner");
 
-        user.Roles.Add(ownerRole);
+        user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
+
+        // Assign PotentialOwner role (not StoreOwner yet)
+        var potentialOwnerRole = await _db.AppRoles
+            .FirstOrDefaultAsync(r => r.RoleName == "PotentialOwner");
+        
+        if (potentialOwnerRole == null)
+        {
+            // Create role if not exists (should be created by migration)
+            potentialOwnerRole = new AppRole { RoleName = "PotentialOwner" };
+            _db.AppRoles.Add(potentialOwnerRole);
+        }
+
+        user.Roles.Add(potentialOwnerRole);
 
         _db.AppUsers.Add(user);
         await _db.SaveChangesAsync();
     }
 
-    // INVITE STAFF
-    public async Task InviteStaffAsync(Guid ownerUserId, Guid storeId, InviteStaffDto dto)
+
+
+    public async Task AssignStoreAsync(Guid userId, AssignStoreDto dto)
     {
-        if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email))
-            throw new Exception("User already exists");
+        // 1. Check if access already exists
+        var exists = await _db.UserStoreAccess.AnyAsync(x => x.UserId == userId && x.StoreId == dto.StoreId);
+        if (exists) return; // Already linked
 
-        var activationToken = Guid.NewGuid().ToString("N");
-
-        var user = new AppUser
+        // 2. Add New Access
+        _db.UserStoreAccess.Add(new _360Retail.Services.Identity.Domain.Entities.UserStoreAccess
         {
-            Email = dto.Email,
-            UserName = dto.Email,
-            Status = "Pending",
-            IsActivated = false,
-            ActivationToken = activationToken,
-            ActivationTokenExpiredAt = DateTime.UtcNow.AddDays(2)
-        };
-
-        _db.AppUsers.Add(user);
-        await _db.SaveChangesAsync();
-
-        _db.UserStoreAccess.Add(new UserStoreAccess
-        {
-            UserId = user.Id,
-            StoreId = storeId,
+            UserId = userId,
+            StoreId = dto.StoreId,
             RoleInStore = dto.RoleInStore,
-            IsDefault = true
+            IsDefault = dto.IsDefault,
+            AssignedAt = DateTime.UtcNow
         });
 
+        // 3. If default, unset other defaults
+        if (dto.IsDefault)
+        {
+             var others = await _db.UserStoreAccess
+                .Where(x => x.UserId == userId && x.StoreId != dto.StoreId)
+                .ToListAsync();
+             foreach (var item in others) item.IsDefault = false;
+        }
+
         await _db.SaveChangesAsync();
-
-        var activationLink =
-            $"{_config["Frontend:BaseUrl"]}/activate?token={activationToken}";
-
-        await _emailService.SendActivationEmailAsync(
-            user.Email,
-            activationLink
-        );
     }
 
-    // ACTIVATE ACCOUNT
-    public async Task ActivateAccountAsync(ActivateAccountDto dto)
+    // REFRESH ACCESS (NEW)
+    public async Task<AuthResultDto> RefreshAccessAsync(Guid userId, Guid? storeId)
     {
-        var user = await _db.AppUsers.FirstOrDefaultAsync(u =>
-            u.ActivationToken == dto.Token &&
-            u.ActivationTokenExpiredAt > DateTime.UtcNow
-        );
+        var user = await _db.AppUsers
+            .Include(u => u.StoreAccesses)
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => u.Id == userId && u.IsActivated == true);
 
         if (user == null)
-            throw new Exception("Invalid or expired activation token");
+            throw new Exception("User not found or inactive");
 
-        user.PasswordHash = HashPassword(dto.Password);
-        user.IsActivated = true;
-        user.Status = "Active";
-        user.ActivationToken = null;
-        user.ActivationTokenExpiredAt = null;
+        // If user wants to switch store
+        if (storeId.HasValue)
+        {
+            // Verify access
+            var targetAccess = user.StoreAccesses.FirstOrDefault(x => x.StoreId == storeId.Value);
+            if (targetAccess == null)
+                throw new Exception("Access denied to this store");
 
-        await _db.SaveChangesAsync();
+            // Check if store is active (paid) by calling SaaS service
+            var isStoreActive = await CheckStoreActiveAsync(storeId.Value);
+            if (!isStoreActive)
+                throw new Exception("Store is not active. Please complete payment to access this store.");
+
+            // Update IsDefault in DB for next logins
+            foreach (var access in user.StoreAccesses) access.IsDefault = false;
+            targetAccess.IsDefault = true;
+            await _db.SaveChangesAsync();
+        }
+
+        // Generate new token
+        var newLinkToken = await GenerateJwtTokenAsync(user);
+        var expireMinutes = GetJwtExpireMinutes();
+
+        return new AuthResultDto(newLinkToken, DateTime.UtcNow.AddMinutes(expireMinutes), user.MustChangePassword);
     }
 
     // JWT
-    private string GenerateJwtToken(AppUser user)
+    private async Task<string> GenerateJwtTokenAsync(AppUser user)
     {
         var jwtSettings = _config.GetSection("JwtSettings");
 
@@ -155,9 +194,23 @@ public class AuthService : IAuthService
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim("id", user.Id.ToString()), // For consistency with BaseApiController
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim("status", user.Status)
         };
+
+        // Add trial_expired claim for TrialCheckFilter middleware
+        if (user.Status == "Trial")
+        {
+            var isExpired = user.TrialEndDate.HasValue && user.TrialEndDate.Value <= DateTime.UtcNow;
+            claims.Add(new Claim("trial_expired", isExpired.ToString().ToLower()));
+            
+            if (user.TrialEndDate.HasValue)
+            {
+                claims.Add(new Claim("trial_end_date", user.TrialEndDate.Value.ToString("o")));
+                claims.Add(new Claim("trial_days_remaining", user.TrialDaysRemaining.ToString()));
+            }
+        }
 
         // System role
         foreach (var role in user.Roles)
@@ -172,6 +225,18 @@ public class AuthService : IAuthService
         {
             claims.Add(new Claim("store_id", defaultAccess.StoreId.ToString()));
             claims.Add(new Claim("store_role", defaultAccess.RoleInStore));
+            // Map RoleInStore to Role claim: "Owner" -> "StoreOwner" for controller compatibility
+            var mappedRole = defaultAccess.RoleInStore == "Owner" 
+                ? "StoreOwner" 
+                : defaultAccess.RoleInStore;
+            claims.Add(new Claim(ClaimTypes.Role, mappedRole));
+
+            // Check subscription expiry for Active users (Paid users)
+            if (user.Status == "Active")
+            {
+                var subscriptionExpired = await CheckSubscriptionExpiredAsync(defaultAccess.StoreId);
+                claims.Add(new Claim("subscription_expired", subscriptionExpired.ToString().ToLower()));
+            }
         }
 
         var expireMinutes = GetJwtExpireMinutes();
@@ -196,6 +261,83 @@ public class AuthService : IAuthService
         return minutes;
     }
 
+    /// <summary>
+    /// Check if store's subscription has expired by calling SaaS service
+    /// </summary>
+    private async Task<bool> CheckSubscriptionExpiredAsync(Guid storeId)
+    {
+        try
+        {
+            var saasClient = _httpClientFactory.CreateClient("SaasService");
+            var response = await saasClient.GetAsync($"/api/subscriptions/store/{storeId}/status");
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                // If we can't reach SaaS service, assume not expired (fail-open for better UX)
+                return false;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<SubscriptionStatusResponse>();
+            
+            if (result == null || result.Status == "NoSubscription")
+            {
+                // No subscription means expired/not active
+                return true;
+            }
+
+            // Check if subscription end date has passed
+            if (result.EndDate.HasValue && result.EndDate.Value <= DateTime.UtcNow)
+            {
+                return true;
+            }
+
+            return result.Status != "Active";
+        }
+        catch
+        {
+            // On error, fail-open to avoid blocking users due to service issues
+            return false;
+        }
+    }
+
+    private record SubscriptionStatusResponse(
+        Guid? Id,
+        string? PlanName,
+        decimal? Price,
+        DateTime? StartDate,
+        DateTime? EndDate,
+        string Status,
+        int? DaysRemaining
+    );
+
+    /// <summary>
+    /// Check if store is active (paid) by calling SaaS service
+    /// </summary>
+    private async Task<bool> CheckStoreActiveAsync(Guid storeId)
+    {
+        try
+        {
+            var saasClient = _httpClientFactory.CreateClient("SaasService");
+            var response = await saasClient.GetAsync($"/api/stores/{storeId}/active-status");
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                // If we can't reach SaaS service, fail-closed for security (block access)
+                return false;
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<StoreActiveResponse>();
+            return result?.IsActive ?? false;
+        }
+        catch
+        {
+            // On error, fail-closed for security
+            return false;
+        }
+    }
+
+    private record StoreActiveResponse(bool IsActive);
+
     // PASSWORD
     private static string HashPassword(string password)
     {
@@ -210,4 +352,174 @@ public class AuthService : IAuthService
         if (string.IsNullOrEmpty(hash)) return false;
         return HashPassword(password) == hash;
     }
+
+    public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest dto)
+    {
+        var user = await _db.AppUsers
+            .FirstOrDefaultAsync(u => u.Id == userId && u.IsActivated);
+
+        if (user == null)
+            throw new Exception("User not found");
+
+        //Verify current password
+        var verifyResult = _passwordHasher.VerifyHashedPassword(
+            user,
+            user.PasswordHash,
+            dto.CurrentPassword
+        );
+
+        if (verifyResult == PasswordVerificationResult.Failed)
+            throw new Exception("Current password is incorrect");
+
+        //Validate new password
+        if (dto.NewPassword != dto.ConfirmNewPassword)
+            throw new Exception("Password confirmation does not match");
+
+        // (Optional) tránh đổi lại mật khẩu cũ
+        if (_passwordHasher.VerifyHashedPassword(
+                user,
+                user.PasswordHash,
+                dto.NewPassword
+            ) == PasswordVerificationResult.Success)
+        {
+            throw new Exception("New password must be different from old password");
+        }
+
+        //Update password + clear flag
+        user.PasswordHash = _passwordHasher.HashPassword(user, dto.NewPassword);
+        user.MustChangePassword = false;
+
+        await _db.SaveChangesAsync();
+    }
+
+    // START TRIAL - Creates trial store and sets trial period
+    public async Task<StartTrialResultDto> StartTrialAsync(Guid userId, string? storeName)
+    {
+        var user = await _db.AppUsers
+            .Include(u => u.StoreAccesses)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+            throw new Exception("User not found");
+
+        // Check if user already has trial or active subscription
+        if (user.TrialStartDate.HasValue)
+            throw new Exception("Trial already started");
+
+        if (user.StoreAccesses.Any())
+            throw new Exception("User already has store access");
+
+        // Set trial period (7 days)
+        user.TrialStartDate = DateTime.UtcNow;
+        user.TrialEndDate = DateTime.UtcNow.AddDays(7);
+        user.Status = "Trial";
+
+        // Call SaaS service to create trial store
+        var saasClient = _httpClientFactory.CreateClient("SaasService");
+        var createStoreRequest = new
+        {
+            StoreName = storeName ?? $"Store của {user.Email}",
+            IsTrial = true
+        };
+
+        var response = await saasClient.PostAsJsonAsync("/api/stores/trial", createStoreRequest);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Failed to create trial store: {error}");
+        }
+
+        var storeResult = await response.Content.ReadFromJsonAsync<CreateTrialStoreResponse>();
+        
+        if (storeResult == null)
+            throw new Exception("Invalid response from SaaS service");
+
+        // Link user to store
+        _db.UserStoreAccess.Add(new Domain.Entities.UserStoreAccess
+        {
+            UserId = userId,
+            StoreId = storeResult.StoreId,
+            RoleInStore = "Owner",
+            IsDefault = true,
+            AssignedAt = DateTime.UtcNow
+        });
+
+        // Upgrade user role: PotentialOwner -> StoreOwner
+        // This ensures they have proper system-level permissions
+        var storeOwnerRole = await _db.AppRoles.FirstOrDefaultAsync(r => r.RoleName == "StoreOwner");
+        if (storeOwnerRole == null)
+        {
+            storeOwnerRole = new AppRole { RoleName = "StoreOwner" };
+            _db.AppRoles.Add(storeOwnerRole);
+        }
+
+        // Add StoreOwner role if not already present
+        // Need to reload roles since they weren't included in initial query
+        await _db.Entry(user).Collection(u => u.Roles).LoadAsync();
+        
+        if (!user.Roles.Any(r => r.RoleName == "StoreOwner"))
+        {
+            user.Roles.Add(storeOwnerRole);
+        }
+
+        // Remove PotentialOwner role (optional, keeps clean role assignment)
+        var potentialRole = user.Roles.FirstOrDefault(r => r.RoleName == "PotentialOwner");
+        if (potentialRole != null)
+        {
+            user.Roles.Remove(potentialRole);
+        }
+
+        await _db.SaveChangesAsync();
+
+        return new StartTrialResultDto(
+            storeResult.StoreId,
+            storeResult.StoreName,
+            user.TrialEndDate.Value,
+            7
+        );
+    }
+
+    // Helper class for SaaS response
+    private record CreateTrialStoreResponse(Guid StoreId, string StoreName);
+
+    // GET SUBSCRIPTION STATUS
+    public async Task<SubscriptionStatusDto> GetSubscriptionStatusAsync(Guid userId)
+    {
+        var user = await _db.AppUsers
+            .Include(u => u.StoreAccesses)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+            throw new Exception("User not found");
+
+        var defaultStore = user.StoreAccesses.FirstOrDefault(x => x.IsDefault);
+        
+        string status = user.Status;
+        int? daysRemaining = null;
+
+        if (user.Status == "Trial")
+        {
+            if (user.IsTrialActive)
+            {
+                daysRemaining = user.TrialDaysRemaining;
+            }
+            else
+            {
+                status = "Expired";
+                daysRemaining = 0;
+            }
+        }
+
+        return new SubscriptionStatusDto(
+            status,
+            defaultStore != null,
+            defaultStore?.StoreId,
+            user.TrialStartDate,
+            user.TrialEndDate,
+            daysRemaining,
+            user.Status == "Trial" ? "Trial" : null
+        );
+    }
 }
+

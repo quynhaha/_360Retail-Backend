@@ -19,5 +19,13 @@ namespace _360Retail.Services.Sales.Application.DTOs
 
         public Guid? CategoryId { get; set; }
         public string CategoryName { get; set; } 
+
+        // Stock Management
+        public int TotalStock { get; set; }
+        public bool HasVariants { get; set; }
+        public bool IsInStock { get; set; }
+        public bool IsActive { get; set; }
+
+        public List<ProductVariantDto> Variants { get; set; } = new();
     }
 }

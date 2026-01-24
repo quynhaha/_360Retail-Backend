@@ -35,31 +35,28 @@ namespace _360Retail.Services.Identity.API.Controllers
             return Ok(new { message = "Register successful" });
         }
 
-        // INVITE STAFF (OWNER)
+        // ASSIGN STORE (INTERNAL/DEV)
         [Authorize]
-        [Authorize(Roles = "StoreOwner")]
-        [HttpPost("invite-staff")]
-        public async Task<IActionResult> InviteStaff(
-            [FromQuery] Guid storeId,
-            [FromBody] InviteStaffDto dto
-        )
+        [HttpPost("assign-store")]
+        public async Task<IActionResult> AssignStore([FromBody] AssignStoreDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userIdClaim == null)
-                return Unauthorized();
+            if (userIdClaim == null) return Unauthorized();
 
-            var ownerUserId = Guid.Parse(userIdClaim);
-
-            await _authService.InviteStaffAsync(ownerUserId, storeId, dto);
-            return Ok(new { message = "Staff invited successfully" });
+            await _authService.AssignStoreAsync(Guid.Parse(userIdClaim), dto);
+            return Ok(new { message = "Store assigned successfully" });
         }
 
-        // ACTIVATE ACCOUNT (PUBLIC)
-        [HttpPost("activate")]
-        public async Task<IActionResult> ActivateAccount([FromBody] ActivateAccountDto dto)
+        // ACCESS REFRESH / SWITCH STORE (NEW)
+        [Authorize]
+        [HttpPost("refresh-access")]
+        public async Task<IActionResult> RefreshAccess([FromQuery] Guid? storeId)
         {
-            await _authService.ActivateAccountAsync(dto);
-            return Ok(new { message = "Account activated successfully" });
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userIdClaim == null) return Unauthorized();
+
+            var result = await _authService.RefreshAccessAsync(Guid.Parse(userIdClaim), storeId);
+            return Ok(result);
         }
 
         // DEBUG / TEST JWT (SWAGGER)
@@ -73,5 +70,23 @@ namespace _360Retail.Services.Identity.API.Controllers
                 c.Value
             }));
         }
+
+        [Authorize]
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequest dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null)
+                return Unauthorized();
+
+            await _authService.ChangePasswordAsync(Guid.Parse(userId), dto);
+
+            return Ok(new
+            {
+                message = "Password changed successfully. Please login again."
+            });
+        }
+
     }
 }

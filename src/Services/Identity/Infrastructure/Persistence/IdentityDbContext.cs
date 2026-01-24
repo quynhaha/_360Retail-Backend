@@ -71,12 +71,9 @@ public partial class IdentityDbContext : DbContext
                 .HasColumnName("is_activated")
                 .HasDefaultValue(false);
 
-            entity.Property(e => e.ActivationToken)
-                .HasColumnName("activation_token")
-                .HasMaxLength(100);
-
-            entity.Property(e => e.ActivationTokenExpiredAt)
-                .HasColumnName("activation_token_expired_at");
+            entity.Property(e => e.MustChangePassword)
+                .HasColumnName("must_change_password")
+                .HasDefaultValue(false);
 
             entity.Property(e => e.StoreId)
                 .HasColumnName("store_id");
