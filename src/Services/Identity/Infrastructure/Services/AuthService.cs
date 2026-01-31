@@ -521,5 +521,152 @@ public class AuthService : IAuthService
             user.Status == "Trial" ? "Trial" : null
         );
     }
+
+    // EXTERNAL OAUTH LOGIN (Google, Facebook)
+    public async Task<ExternalAuthResultDto> ExternalLoginAsync(ExternalLoginDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Provider) || string.IsNullOrWhiteSpace(dto.IdToken))
+            throw new Exception("Provider and IdToken are required");
+
+        // Validate token based on provider
+        GoogleUserInfo? userInfo = null;
+        
+        if (dto.Provider.Equals("Google", StringComparison.OrdinalIgnoreCase))
+        {
+            userInfo = await ValidateGoogleTokenAsync(dto.IdToken);
+        }
+        else
+        {
+            throw new Exception($"Unsupported provider: {dto.Provider}");
+        }
+
+        if (userInfo == null || string.IsNullOrEmpty(userInfo.Email))
+            throw new Exception("Failed to validate token or retrieve user info");
+
+        // Find existing user by external ID or email
+        var existingUser = await _db.AppUsers
+            .Include(u => u.StoreAccesses)
+            .Include(u => u.Roles)
+            .FirstOrDefaultAsync(u => 
+                (u.AuthProvider == dto.Provider && u.ExternalUserId == userInfo.Sub) ||
+                (u.Email == userInfo.Email));
+
+        bool isNewUser = existingUser == null;
+
+        if (existingUser != null)
+        {
+            // Update OAuth info if user was local before
+            if (existingUser.AuthProvider == "Local" && string.IsNullOrEmpty(existingUser.ExternalUserId))
+            {
+                existingUser.AuthProvider = dto.Provider;
+                existingUser.ExternalUserId = userInfo.Sub;
+                existingUser.ProfilePictureUrl = userInfo.Picture;
+            }
+            // Update profile picture if changed
+            else if (existingUser.ProfilePictureUrl != userInfo.Picture)
+            {
+                existingUser.ProfilePictureUrl = userInfo.Picture;
+            }
+            
+            await _db.SaveChangesAsync();
+        }
+        else
+        {
+            // Create new user from OAuth
+            existingUser = new AppUser
+            {
+                Email = userInfo.Email,
+                UserName = userInfo.Email,
+                AuthProvider = dto.Provider,
+                ExternalUserId = userInfo.Sub,
+                ProfilePictureUrl = userInfo.Picture,
+                Status = "Registered",  // Will need to start trial
+                IsActivated = true,
+                MustChangePassword = false,
+                PasswordHash = null  // No password for OAuth users
+            };
+
+            // Assign PotentialOwner role
+            var potentialOwnerRole = await _db.AppRoles
+                .FirstOrDefaultAsync(r => r.RoleName == "PotentialOwner");
+            
+            if (potentialOwnerRole == null)
+            {
+                potentialOwnerRole = new AppRole { RoleName = "PotentialOwner" };
+                _db.AppRoles.Add(potentialOwnerRole);
+            }
+
+            existingUser.Roles.Add(potentialOwnerRole);
+            _db.AppUsers.Add(existingUser);
+            await _db.SaveChangesAsync();
+        }
+
+        // Generate JWT token
+        var token = await GenerateJwtTokenAsync(existingUser);
+        var expireMinutes = GetJwtExpireMinutes();
+
+        return new ExternalAuthResultDto(
+            token,
+            DateTime.UtcNow.AddMinutes(expireMinutes),
+            isNewUser,
+            existingUser.Email,
+            existingUser.ProfilePictureUrl
+        );
+    }
+
+    // Validate Google ID Token
+    private async Task<GoogleUserInfo?> ValidateGoogleTokenAsync(string idToken)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient();
+            var response = await httpClient.GetAsync(
+                $"https://oauth2.googleapis.com/tokeninfo?id_token={idToken}");
+            
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var content = await response.Content.ReadAsStringAsync();
+            var tokenInfo = System.Text.Json.JsonSerializer.Deserialize<GoogleUserInfo>(content, 
+                new System.Text.Json.JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                });
+
+            // Validate the token is for our app
+            // Try environment variable first, then fall back to appsettings
+            var expectedClientId = Environment.GetEnvironmentVariable("OAUTH_GOOGLE_CLIENT_ID") 
+                ?? _config["OAuth:Google:ClientId"];
+            
+            if (string.IsNullOrEmpty(expectedClientId))
+            {
+                throw new Exception("Google OAuth Client ID not configured");
+            }
+            
+            if (tokenInfo?.Aud != expectedClientId)
+            {
+                throw new Exception("Token was not issued for this application");
+            }
+
+            return tokenInfo;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to validate Google token: {ex.Message}");
+        }
+    }
+
+    // Google user info from token validation
+    // Note: Google tokeninfo API returns ALL values as strings
+    private record GoogleUserInfo(
+        string Sub,      // User ID
+        string Email,
+        string? Email_verified,
+        string? Name,
+        string? Picture,
+        string? Aud,     // Client ID
+        string? Iss,     // Issuer
+        string? Exp      // Expiration (as string)
+    );
 }
 
