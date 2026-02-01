@@ -1,4 +1,5 @@
 ﻿using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Shared.Common.Middleware;
 using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
@@ -142,6 +143,9 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 #region ===== MIDDLEWARE =====
+// Global Exception Handler - must be first
+app.UseGlobalExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

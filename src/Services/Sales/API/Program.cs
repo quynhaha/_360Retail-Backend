@@ -1,4 +1,5 @@
-﻿using _360Retail.Services.Sales.Infrastructure.Persistence; 
+﻿using _360Retail.Services.Sales.Infrastructure.Persistence;
+using _360Retail.Shared.Common.Middleware; 
 using Microsoft.EntityFrameworkCore;
 using _360Retail.Services.Sales.Application.Interfaces;
 using _360Retail.Services.Sales.Infrastructure.Services;
@@ -105,6 +106,9 @@ var app = builder.Build();
 // ==========================================
 //  KHU VỰC CẤU HÌNH PIPELINE (Middleware)
 // ==========================================
+
+// Global Exception Handler - must be first
+app.UseGlobalExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
