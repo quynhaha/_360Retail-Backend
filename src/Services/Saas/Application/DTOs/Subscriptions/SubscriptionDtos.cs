@@ -1,7 +1,13 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace _360Retail.Services.Saas.Application.DTOs.Subscriptions;
 
-// Request to purchase a plan - only planId needed
-public record PurchasePlanRequest(Guid PlanId);
+// Request to purchase a plan - requires validation
+public class PurchasePlanRequest
+{
+    [Required(ErrorMessage = "PlanId là bắt buộc")]
+    public Guid PlanId { get; set; }
+}
 
 // Response with VNPay payment URL
 public record PaymentUrlResponse(
