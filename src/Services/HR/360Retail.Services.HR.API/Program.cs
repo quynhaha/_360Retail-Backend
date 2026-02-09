@@ -1,4 +1,5 @@
 using _360Retail.Services.HR.Application.Interfaces;
+using _360Retail.Shared.Common.Middleware;
 using _360Retail.Services.HR.Infrastructure.Persistence;
 using _360Retail.Services.HR.Infrastructure.Services;
 using _360Retail.Services.HR.Infrastructure.Services.Email;
@@ -113,6 +114,9 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 #region ===== MIDDLEWARE =====
+// Global Exception Handler - must be first
+app.UseGlobalExceptionHandler();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
