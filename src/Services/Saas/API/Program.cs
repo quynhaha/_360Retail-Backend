@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using _360Retail.Shared.Common.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -114,6 +115,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+// Global Exception Handler - must be first
+app.UseGlobalExceptionHandler();
 
 // Middleware
 if (app.Environment.IsDevelopment())

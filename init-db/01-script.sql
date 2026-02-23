@@ -525,3 +525,19 @@ WHERE NOT EXISTS (SELECT 1 FROM saas.service_plans WHERE plan_name = 'Yearly');
 ALTER TABLE saas.payments
 ADD COLUMN IF NOT EXISTS user_id UUID NULL;
 
+-- 31/1/2026: OAuth Login Support (Google, Facebook)
+-- Add OAuth provider columns to identity.app_users
+ALTER TABLE identity.app_users
+ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(20) DEFAULT 'Local',
+ADD COLUMN IF NOT EXISTS external_user_id VARCHAR(255),
+ADD COLUMN IF NOT EXISTS profile_picture_url TEXT;
+
+-- Set default auth_provider for existing users
+UPDATE identity.app_users
+SET auth_provider = 'Local'
+WHERE auth_provider IS NULL;
+
+-- Index for faster OAuth lookups
+CREATE INDEX IF NOT EXISTS idx_users_oauth_provider
+ON identity.app_users(auth_provider, external_user_id);
+

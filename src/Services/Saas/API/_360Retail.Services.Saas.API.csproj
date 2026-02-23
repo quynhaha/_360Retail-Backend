@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\_360Retail.Shared.csproj" />
     <ProjectReference Include="..\Application\_360Retail.Services.Saas.Application.csproj" />
     <ProjectReference Include="..\Infrastructure\_360Retail.Services.Saas.Infrastructure.csproj" />
   </ItemGroup>

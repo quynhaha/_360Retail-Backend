@@ -18,5 +18,8 @@ public interface IAuthService
     Task<StartTrialResultDto> StartTrialAsync(Guid userId, string? storeName);
     
     Task<SubscriptionStatusDto> GetSubscriptionStatusAsync(Guid userId);
+
+    // External OAuth methods
+    Task<ExternalAuthResultDto> ExternalLoginAsync(ExternalLoginDto dto);
 }
 

@@ -9,11 +9,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\_360Retail.Shared.csproj" />
     <ProjectReference Include="..\..\Saas\Infrastructure\_360Retail.Services.Saas.Infrastructure.csproj" />
     <ProjectReference Include="..\Application\_360Retail.Services.Identity.Application.csproj" />
     <ProjectReference Include="..\Domain\_360Retail.Services.Identity.Domain.csproj" />

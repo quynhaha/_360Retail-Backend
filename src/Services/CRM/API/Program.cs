@@ -1,22 +1,40 @@
+using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
+using _360Retail.Services.CRM.Infrastructure.Persistence;
+using _360Retail.Services.CRM.Infrastructure.Repositories;
+using _360Retail.Services.CRM.Application.Services;
+using _360Retail.Services.CRM.Application.Interfaces;
+using _360Retail.Services.CRM.Application.Mappings;
+using _360Retail.Services.CRM.API.Middleware;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
-
-// Add CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        policy =>
-        {
-            policy.WithOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:4200")
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
-        });
-});
 builder.Services.AddSwaggerGen();
+
+// DB Context
+builder.Services.AddDbContext<CrmDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Repositories
+builder.Services.AddScoped<ILoyaltyRuleRepository, LoyaltyRuleRepository>();
+builder.Services.AddScoped<ICustomerRepository, CustomerRepository>();
+builder.Services.AddScoped<ILoyaltyTransactionRepository, LoyaltyTransactionRepository>();
+builder.Services.AddScoped<IIdempotencyRepository, IdempotencyRepository>();
+
+// Services
+builder.Services.AddScoped<ILoyaltyService, LoyaltyService>();
+
+// AutoMapper
+builder.Services.AddAutoMapper(cfg => {
+    cfg.AddProfile<CrmProfile>();
+});
 
 var app = builder.Build();
 
@@ -27,32 +45,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<IdempotencyMiddleware>(); // Add Idempotency Middleware
+
 app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

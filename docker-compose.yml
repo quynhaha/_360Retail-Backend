@@ -111,6 +111,7 @@ services:
     container_name: 360retail-crm-api
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
     ports:
       - "5169:8080"
     networks:
