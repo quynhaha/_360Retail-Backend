@@ -7,9 +7,7 @@ namespace _360Retail.Services.CRM.Infrastructure.Persistence;
 
 public partial class CrmDbContext : DbContext
 {
-    public CrmDbContext()
-    {
-    }
+
 
     public CrmDbContext(DbContextOptions<CrmDbContext> options)
         : base(options)
@@ -21,6 +19,9 @@ public partial class CrmDbContext : DbContext
     public virtual DbSet<CustomerFeedback> CustomerFeedbacks { get; set; }
 
     public virtual DbSet<LoyaltyHistory> LoyaltyHistories { get; set; }
+    public virtual DbSet<LoyaltyRule> LoyaltyRules { get; set; }
+    public virtual DbSet<LoyaltyTransaction> LoyaltyTransactions { get; set; }
+    public virtual DbSet<IdempotencyRecord> IdempotencyRecords { get; set; }
 
 
 
@@ -56,6 +57,9 @@ public partial class CrmDbContext : DbContext
             entity.Property(e => e.ZaloId)
                 .HasMaxLength(100)
                 .HasColumnName("zalo_id");
+            
+            // Should match DB
+            entity.Ignore(e => e.LoyaltyTransactions);
         });
 
         modelBuilder.Entity<CustomerFeedback>(entity =>
@@ -110,6 +114,29 @@ public partial class CrmDbContext : DbContext
                 .HasForeignKey(d => d.CustomerId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("loyalty_history_customer_id_fkey");
+        });
+
+        modelBuilder.Entity<LoyaltyRule>(entity =>
+        {
+            entity.ToTable("loyalty_rules", "crm");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EarningRate).HasColumnType("decimal(18,4)");
+            entity.Property(e => e.MinSpend).HasColumnType("decimal(18,4)");
+        });
+
+        modelBuilder.Entity<LoyaltyTransaction>(entity =>
+        {
+            entity.ToTable("loyalty_transactions", "crm");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.OrderId).IsUnique(); // Unique Index
+            entity.Property(e => e.Points).IsRequired();
+        });
+        
+        // Configure Idempotency
+        modelBuilder.Entity<IdempotencyRecord>(entity =>
+        {
+            entity.ToTable("idempotency_records", "crm");
+            entity.HasKey(e => e.Key);
         });
 
         OnModelCreatingPartial(modelBuilder);

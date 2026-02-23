@@ -88,5 +88,28 @@ namespace _360Retail.Services.Identity.API.Controllers
             });
         }
 
+        // EXTERNAL OAUTH LOGIN (Google, Facebook)
+        /// <summary>
+        /// Login with external OAuth provider (Google, Facebook)
+        /// </summary>
+        /// <remarks>
+        /// Frontend should use Google Sign-In SDK to get the ID token,
+        /// then send it here for backend validation and JWT generation.
+        /// 
+        /// Example request:
+        /// ```json
+        /// {
+        ///     "provider": "Google",
+        ///     "idToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ..."
+        /// }
+        /// ```
+        /// </remarks>
+        [HttpPost("external")]
+        public async Task<IActionResult> ExternalLogin([FromBody] ExternalLoginDto dto)
+        {
+            var result = await _authService.ExternalLoginAsync(dto);
+            return Ok(result);
+        }
+
     }
 }

@@ -26,6 +26,16 @@ public partial class AppUser
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // OAuth Provider Info
+    [Column("auth_provider")]
+    public string AuthProvider { get; set; } = "Local";  // "Local", "Google", "Facebook"
+    
+    [Column("external_user_id")]
+    public string? ExternalUserId { get; set; }  // Provider's user ID
+    
+    [Column("profile_picture_url")]
+    public string? ProfilePictureUrl { get; set; }  // Avatar from provider
+
     // Trial period fields
     [Column("trial_start_date")]
     public DateTime? TrialStartDate { get; set; }
