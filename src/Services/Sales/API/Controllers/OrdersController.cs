@@ -94,4 +94,25 @@ public class OrdersController : BaseApiController
             return BadResult(ex.Message);
         }
     }
+
+    /// <summary>
+    /// Cancel an order and restore product stock
+    /// </summary>
+    [Authorize(Roles = "StoreOwner,Manager")]
+    [HttpPut("{id}/cancel")]
+    public async Task<IActionResult> CancelOrder(Guid id)
+    {
+        var storeId = GetCurrentStoreId();
+        if (storeId == Guid.Empty) return BadResult("User has no store context");
+
+        try
+        {
+            await _orderService.CancelOrderAsync(id, storeId);
+            return OkResult(true, "Order cancelled and stock restored");
+        }
+        catch (Exception ex)
+        {
+            return BadResult(ex.Message);
+        }
+    }
 }

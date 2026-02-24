@@ -37,6 +37,8 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
       - ServiceUrls__HrService=http://hr-api:8080
       - ServiceUrls__SaasService=http://saas-api:8080
+      - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID}
+      - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET}
     ports:
       - "5297:8080"
     depends_on:
@@ -111,8 +113,11 @@ services:
     container_name: 360retail-crm-api
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
     ports:
       - "5169:8080"
+    depends_on:
+      - postgres
     networks:
       - 360retail-network
 

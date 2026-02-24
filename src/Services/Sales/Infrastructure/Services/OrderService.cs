@@ -256,13 +256,71 @@ public class OrderService : IOrderService
          };
     }
     
+    // Valid status transitions
+    private static readonly Dictionary<string, string[]> ValidTransitions = new()
+    {
+        { "Pending", new[] { "Completed", "Cancelled" } },
+        { "Completed", new[] { "Cancelled" } },
+        { "Cancelled", Array.Empty<string>() }
+    };
+
     public async Task UpdateStatusAsync(Guid id, Guid storeId, string status)
     {
          var order = await _db.Orders.FirstOrDefaultAsync(o => o.Id == id && o.StoreId == storeId);
          if (order == null) throw new Exception("Order not found");
-         
+
+         // Validate transition
+         if (ValidTransitions.TryGetValue(order.Status ?? "Pending", out var allowed))
+         {
+             if (!allowed.Contains(status))
+                 throw new Exception($"Cannot change status from '{order.Status}' to '{status}'");
+         }
+
+         // If cancelling, use CancelOrderAsync instead
+         if (status == "Cancelled")
+         {
+             await CancelOrderAsync(id, storeId);
+             return;
+         }
+
          order.Status = status;
          await _db.SaveChangesAsync();
+    }
+
+    public async Task CancelOrderAsync(Guid id, Guid storeId)
+    {
+        var order = await _db.Orders
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.ProductVariant)
+            .FirstOrDefaultAsync(o => o.Id == id && o.StoreId == storeId);
+
+        if (order == null)
+            throw new Exception("Order not found");
+
+        if (order.Status == "Cancelled")
+            throw new Exception("Order is already cancelled");
+
+        // Restore stock for each item
+        foreach (var item in order.OrderItems)
+        {
+            if (item.ProductVariantId.HasValue && item.ProductVariant != null)
+            {
+                // Restore variant stock
+                item.ProductVariant.StockQuantity += item.Quantity;
+            }
+            else if (item.Product != null)
+            {
+                // Restore base product stock
+                item.Product.StockQuantity += item.Quantity;
+            }
+        }
+
+        order.Status = "Cancelled";
+        order.PaymentStatus = "Refunded";
+
+        await _db.SaveChangesAsync();
     }
     
     private string GenerateOrderCode()
