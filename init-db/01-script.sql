@@ -541,3 +541,46 @@ WHERE auth_provider IS NULL;
 CREATE INDEX IF NOT EXISTS idx_users_oauth_provider
 ON identity.app_users(auth_provider, external_user_id);
 
+-- 24/2/2026: Add missing CRM Loyalty tables
+CREATE TABLE IF NOT EXISTS crm.idempotency_records (
+    "Key" character varying(100) NOT NULL,
+    "StatusCode" integer NOT NULL,
+    "ResponseBody" text NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "ExpiresAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_idempotency_records" PRIMARY KEY ("Key")
+);
+
+CREATE TABLE IF NOT EXISTS crm.loyalty_rules (
+    "Id" uuid NOT NULL,
+    "StoreId" uuid NOT NULL,
+    "Name" character varying(100) NOT NULL,
+    "Type" integer NOT NULL,
+    "EarningRate" numeric(18,4) NOT NULL,
+    "MinSpend" numeric(18,4) NOT NULL,
+    "Status" integer NOT NULL,
+    "StartDate" timestamp with time zone,
+    "EndDate" timestamp with time zone,
+    "IsDeleted" boolean NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    "UpdatedAt" timestamp with time zone,
+    CONSTRAINT "PK_loyalty_rules" PRIMARY KEY ("Id")
+);
+
+CREATE TABLE IF NOT EXISTS crm.loyalty_transactions (
+    "Id" uuid NOT NULL,
+    "CustomerId" uuid NOT NULL,
+    "StoreId" uuid NOT NULL,
+    "OrderId" uuid,
+    "RuleId" uuid,
+    "Points" integer NOT NULL,
+    "Type" integer NOT NULL,
+    "Description" character varying(200) NOT NULL,
+    "TransactionDate" timestamp with time zone NOT NULL,
+    "CreatedAt" timestamp with time zone NOT NULL,
+    CONSTRAINT "PK_loyalty_transactions" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_loyalty_transactions_customers_CustomerId" FOREIGN KEY ("CustomerId") REFERENCES crm.customers (id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "IX_loyalty_transactions_OrderId" ON crm.loyalty_transactions ("OrderId");
+CREATE INDEX IF NOT EXISTS "IX_loyalty_transactions_CustomerId" ON crm.loyalty_transactions ("CustomerId");
