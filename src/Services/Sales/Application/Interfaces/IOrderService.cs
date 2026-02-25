@@ -8,4 +8,5 @@ public interface IOrderService
     Task<PagedResult<OrderDto>> GetListAsync(Guid storeId, Guid userId, string[] userRoles, string? status, DateTime? fromDate, DateTime? toDate, int page, int pageSize);
     Task<OrderDto?> GetByIdAsync(Guid id, Guid storeId, Guid userId, string[] userRoles);
     Task UpdateStatusAsync(Guid id, Guid storeId, string status);
+    Task CancelOrderAsync(Guid id, Guid storeId);
 }

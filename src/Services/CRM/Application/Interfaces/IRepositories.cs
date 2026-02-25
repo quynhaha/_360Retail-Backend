@@ -17,7 +17,12 @@ public interface ILoyaltyRuleRepository
 public interface ICustomerRepository
 {
     Task<Customer?> GetByIdAsync(Guid id);
+    Task<IEnumerable<Customer>> GetByStoreIdAsync(Guid storeId, int page, int pageSize);
+    Task<int> GetTotalCountByStoreAsync(Guid storeId);
+    Task<Customer?> GetByPhoneAndStoreAsync(string phone, Guid storeId);
+    Task AddAsync(Customer customer);
     Task UpdateAsync(Customer customer);
+    Task DeleteAsync(Customer customer);
 }
 
 public interface ILoyaltyTransactionRepository

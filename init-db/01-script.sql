@@ -584,3 +584,9 @@ CREATE TABLE IF NOT EXISTS crm.loyalty_transactions (
 
 CREATE UNIQUE INDEX IF NOT EXISTS "IX_loyalty_transactions_OrderId" ON crm.loyalty_transactions ("OrderId");
 CREATE INDEX IF NOT EXISTS "IX_loyalty_transactions_CustomerId" ON crm.loyalty_transactions ("CustomerId");
+
+-- 25/2/2026: Add missing columns to crm.customers (required by Customer entity)
+ALTER TABLE crm.customers
+ADD COLUMN IF NOT EXISTS last_purchase_date TIMESTAMP,
+ADD COLUMN IF NOT EXISTS rank VARCHAR(50),
+ADD COLUMN IF NOT EXISTS zalo_id VARCHAR(100);

@@ -70,9 +70,42 @@ public class CustomerRepository : ICustomerRepository
         return await _context.Customers.FindAsync(id);
     }
 
+    public async Task<IEnumerable<Customer>> GetByStoreIdAsync(Guid storeId, int page, int pageSize)
+    {
+        return await _context.Customers
+            .Where(c => c.StoreId == storeId)
+            .OrderBy(c => c.FullName)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+    }
+
+    public async Task<int> GetTotalCountByStoreAsync(Guid storeId)
+    {
+        return await _context.Customers.CountAsync(c => c.StoreId == storeId);
+    }
+
+    public async Task<Customer?> GetByPhoneAndStoreAsync(string phone, Guid storeId)
+    {
+        return await _context.Customers
+            .FirstOrDefaultAsync(c => c.PhoneNumber == phone && c.StoreId == storeId);
+    }
+
+    public async Task AddAsync(Customer customer)
+    {
+        await _context.Customers.AddAsync(customer);
+        await _context.SaveChangesAsync();
+    }
+
     public async Task UpdateAsync(Customer customer)
     {
         _context.Customers.Update(customer);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(Customer customer)
+    {
+        _context.Customers.Remove(customer);
         await _context.SaveChangesAsync();
     }
 }

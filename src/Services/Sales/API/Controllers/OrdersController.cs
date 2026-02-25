@@ -8,7 +8,7 @@ using _360Retail.Services.Sales.API.Filters;
 namespace _360Retail.Services.Sales.API.Controllers;
 
 [Authorize(Roles = "StoreOwner,Manager,Staff,Customer")]
-[Route("api/sales/orders")]
+[Route("api/orders")]
 [RequiresActiveSubscription]  // Block writes for expired trials
 public class OrdersController : BaseApiController
 {
@@ -88,6 +88,27 @@ public class OrdersController : BaseApiController
         {
             await _orderService.UpdateStatusAsync(id, storeId, status);
             return OkResult(true, "Status updated");
+        }
+        catch (Exception ex)
+        {
+            return BadResult(ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Cancel an order and restore product stock
+    /// </summary>
+    [Authorize(Roles = "StoreOwner,Manager")]
+    [HttpPut("{id}/cancel")]
+    public async Task<IActionResult> CancelOrder(Guid id)
+    {
+        var storeId = GetCurrentStoreId();
+        if (storeId == Guid.Empty) return BadResult("User has no store context");
+
+        try
+        {
+            await _orderService.CancelOrderAsync(id, storeId);
+            return OkResult(true, "Order cancelled and stock restored");
         }
         catch (Exception ex)
         {

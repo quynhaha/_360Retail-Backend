@@ -98,6 +98,7 @@ public class LoyaltyService : ILoyaltyService
         if (totalPointsToEarn > 0)
         {
             customer.TotalPoints = (customer.TotalPoints ?? 0) + totalPointsToEarn;
+            customer.Rank = CalculateRank(customer.TotalPoints.Value);
             await _customerRepo.UpdateAsync(customer);
 
             var transaction = new LoyaltyTransaction
@@ -123,6 +124,7 @@ public class LoyaltyService : ILoyaltyService
             throw new InvalidOperationException("Insufficient points");
 
         customer.TotalPoints -= request.PointsToRedeem;
+        customer.Rank = CalculateRank(customer.TotalPoints ?? 0);
         await _customerRepo.UpdateAsync(customer);
 
         var transaction = new LoyaltyTransaction
@@ -152,4 +154,15 @@ public class LoyaltyService : ILoyaltyService
 
         return new PagedResult<LoyaltyTransactionDto>(dtos, page, pageSize, total);
     }
+
+    /// <summary>
+    /// Auto-calculate customer rank based on total points
+    /// </summary>
+    private static string CalculateRank(int totalPoints) => totalPoints switch
+    {
+        >= 5000 => "Platinum",
+        >= 2000 => "Gold",
+        >= 500  => "Silver",
+        _       => "Bronze"
+    };
 }

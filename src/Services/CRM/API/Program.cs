@@ -83,6 +83,7 @@ builder.Services.AddScoped<IIdempotencyRepository, IdempotencyRepository>();
 
 // Services
 builder.Services.AddScoped<ILoyaltyService, LoyaltyService>();
+builder.Services.AddScoped<ICustomerService, CustomerService>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(cfg => {

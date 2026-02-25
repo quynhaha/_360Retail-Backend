@@ -99,3 +99,45 @@ public record PagedResult<T>(
     int PageSize,
     int TotalCount
 );
+
+// --- Customer DTOs ---
+
+public class CustomerDto
+{
+    public Guid Id { get; set; }
+    public string FullName { get; set; } = null!;
+    public string PhoneNumber { get; set; } = null!;
+    public string? ZaloId { get; set; }
+    public DateTime? LastPurchaseDate { get; set; }
+    public int TotalPoints { get; set; }
+    public string? Rank { get; set; }
+    public Guid? StoreId { get; set; }
+}
+
+public class CreateCustomerDto
+{
+    [Required]
+    [MaxLength(100)]
+    public string FullName { get; set; } = null!;
+
+    [Required]
+    [MaxLength(20)]
+    public string PhoneNumber { get; set; } = null!;
+
+    [MaxLength(100)]
+    public string? ZaloId { get; set; }
+}
+
+public class UpdateCustomerDto
+{
+    [Required]
+    [MaxLength(100)]
+    public string FullName { get; set; } = null!;
+
+    [Required]
+    [MaxLength(20)]
+    public string PhoneNumber { get; set; } = null!;
+
+    [MaxLength(100)]
+    public string? ZaloId { get; set; }
+}
