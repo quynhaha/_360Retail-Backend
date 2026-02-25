@@ -1,80 +1,214 @@
-# Google Antigravity
+# 360Retail Backend
 
-[English](./README.md) | [Tiếng Việt](./README.vi.md)
+> Nền tảng quản lý bán lẻ thông minh dành cho cửa hàng vừa & nhỏ tại Việt Nam.
 
-> **The Ultimate AI Agent Brain.**  
-> *A comprehensive collection of Rules, Skills, and Workflows for modern AI Agents.*
+360Retail cung cấp hệ thống **all-in-one** giúp chủ cửa hàng quản lý bán hàng, nhân sự, khách hàng và gói dịch vụ trên cùng một nền tảng, với kiến trúc **Microservices** hiện đại.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+---
 
-**Google Antigravity** is the core intelligence engine for building AI Agents. It provides a CLI tool (`npx`) to instantly scaffold agent-ready projects equipped with comprehensive professional skills and robust operational rules.
+## 🏗️ Kiến trúc
 
-| **20+** Master Skills | **15+** Specialist Agents | **11** Workflows | **13** Shared Modules |
-| :---: | :---: | :---: | :---: |
-| Full-Stack Capabilities | Role-Based Personas | Development Processes | Reusable Standards |
-
-## 📦 Installation
-
-### Quick Start
-
-Run the following command:
-
-```sh
-# Option 1: Create a new project folder
-npx antigravity-ide my-agent-project
-
-# Option 2: Install in the current directory (Smart Install)
-npx antigravity-ide
+```
+┌──────────────────────────────────────────────────┐
+│                  API Gateway (:5001)              │
+│                 (YARP Reverse Proxy)              │
+└──────┬───────┬───────┬───────┬───────┬───────────┘
+       │       │       │       │       │
+  ┌────▼──┐┌───▼──┐┌───▼──┐┌──▼───┐┌──▼───┐
+  │Identity││ Saas ││Sales ││  HR  ││ CRM  │
+  │ :5297  ││:5031 ││:5091 ││:5280 ││:5169 │
+  └────┬───┘└──┬───┘└──┬───┘└──┬───┘└──┬───┘
+       │       │       │       │       │
+       └───────┴───────┴───────┴───────┘
+                       │
+              ┌────────▼────────┐
+              │  PostgreSQL 16  │
+              │    (:5433)      │
+              └─────────────────┘
 ```
 
-Follow the interactive setup:
-1.  **Agent Engine**: Choose **Standard (Node.js)** for lightweight tasks or **Advanced (Python)** for AI/Data Science.
-2.  **Industry Domain**: Select your field (Finance, Education, etc.) to optimize the Agent's focus and skills.
+### Microservices
 
-```sh
-npx antigravity-ide my-project --skip-prompts
+| Service | Port | Chức năng |
+|---------|------|-----------|
+| **API Gateway** | 5001 | YARP reverse proxy, routing |
+| **Identity** | 5297 | JWT Auth, OAuth Google, User management, Role-based access |
+| **SaaS** | 5031 | Store management, Subscription lifecycle, VNPay payment |
+| **Sales** | 5091 | Products, Categories, Orders (POS), Stock management |
+| **HR** | 5280 | Employees, Timekeeping, Task management |
+| **CRM** | 5169 | Customer management, Loyalty points (auto-earn & rank) |
+
+### Service Communication
+
+| Luồng | Phương thức | Mô tả |
+|-------|------------|-------|
+| Saas → Identity | HTTP (Internal) | Activate subscription, Assign store |
+| Sales → CRM | HTTP (Internal) | Auto-earn loyalty points after order |
+| HR → Identity | HTTP (Internal) | Sync employee roles |
+
+---
+
+## 🛠️ Tech Stack
+
+- **Runtime:** .NET 8 / ASP.NET Core
+- **Database:** PostgreSQL 16
+- **ORM:** Entity Framework Core
+- **Auth:** JWT + Google OAuth 2.0
+- **Payment:** VNPay API v2.1.0
+- **Storage:** Cloudinary (product images)
+- **Gateway:** YARP Reverse Proxy
+- **Container:** Docker + Docker Compose
+- **Email:** Resend API
+
+---
+
+## 🚀 Khởi động dự án
+
+### Yêu cầu
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (bật WSL2 trên Windows)
+- Git
+
+### 1. Clone & cấu hình
+
+```bash
+git clone <repository-url>
+cd _360Retail-Backend
+
+# Copy file cấu hình
+cp .env.example .env
 ```
 
-### Update to Latest Version
+Chỉnh sửa file `.env` với các giá trị thực:
 
-Keep your Antigravity IDE up to date with the latest skills and brain features:
+```env
+# Google OAuth
+OAUTH_GOOGLE_CLIENT_ID=your_google_client_id
+OAUTH_GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-```sh
-npx antigravity-ide update
+# Cloudinary (upload ảnh sản phẩm)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Resend (gửi email)
+RESEND_API_KEY=your_resend_api_key
+RESEND_FROM_EMAIL=noreply@yourdomain.com
 ```
 
-## 🤖 AI Model Compatibility
+### 2. Khởi động toàn bộ
 
-**Google Antigravity** is designed to be the "Brain" for any AI model.
+```bash
+docker compose up --build
+```
 
-- **Google Gemini**: Fully compatible with 2M context window.
-- **Anthropic Claude**: Optimized reasoning with `.agent` rules.
-- **OpenAI GPT-4**: Standardized skill formats.
+> ⏳ Lần chạy đầu tiên mất ~3-5 phút để build images.
 
-👉 **See [GEMINI.md](./GEMINI.md) for integration guides.**
+### 3. Truy cập
 
-## 🚀 Core Features
+| Service | URL |
+|---------|-----|
+| API Gateway | http://localhost:5001 |
+| Identity Swagger | http://localhost:5297/swagger |
+| SaaS Swagger | http://localhost:5031/swagger |
+| Sales Swagger | http://localhost:5091/swagger |
+| HR Swagger | http://localhost:5280/swagger |
+| CRM Swagger | http://localhost:5169/swagger |
+| PgAdmin | http://localhost:5050 |
 
-### 🧠 **The Agent Brain (.agent)**
-The heart of the system is the `.agent` folder, which contains:
-- **Professional Skills**: Production-ready capabilities for Development, DevOps, Security, and Data interactions.
-- **Universal Compatibility**: Optimized for **Gemini Pro**, **Claude 3.5 Sonnet**, and **GPT-4o**.
-- **Operational Rules**: Pre-defined protocols for safe and effective agent behavior.
+**PgAdmin credentials:** `admin@360retail.com` / `admin`
 
-### ⚡ **Project Scaffolding (CLI)**
-A smart CLI tool to bootstrap new projects:
-- **Smart Install**: Detects context to install in current directory or create a new one.
-- **Agent Engines**: **Standard** (Node.js, lightweight) or **Advanced** (Python, full-power).
-- **Industry Intelligence**: Installs all professional skills but prioritizes your specific domain (Finance, Logistics, etc.) in the Agent's configuration.
-- **Fast**: Minimal footprint, intelligent filtering.
+### 4. Tài khoản mặc định
 
-## 📂 Project Structure
+| Email | Password (SHA256) | Role |
+|-------|-------------------|------|
+| `admin` | `1` | SuperAdmin |
 
-```text
-antigravity-ide/
-├── .agent/           # 🧠 THE BRAIN: Configs & 550+ Skills
-└── cli/              # ⚡ CLI TOOL: Project Scaffolding
+---
+
+## 📦 Database Schema
+
+Hệ thống sử dụng **1 Database chung** (`360RetailDB`) với các **schema riêng biệt** cho từng module:
+
+| Schema | Module | Bảng chính |
+|--------|--------|-----------|
+| `identity` | Authentication | `app_users`, `app_roles`, `user_roles`, `user_store_access` |
+| `saas` | SaaS Platform | `stores`, `service_plans`, `subscriptions`, `payments` |
+| `sales` | Bán hàng | `products`, `categories`, `orders`, `order_items`, `product_variants` |
+| `hr` | Nhân sự | `employees`, `timekeepings`, `tasks` |
+| `crm` | Khách hàng | `customers`, `loyalty_rules`, `loyalty_transactions` |
+
+---
+
+## ✨ Tính năng chính
+
+### 🔐 Authentication & Authorization
+- JWT Token + Refresh token flow
+- Google OAuth 2.0 login
+- Role-based: SuperAdmin, StoreOwner, Manager, Staff, Customer
+- Multi-store access control
+
+### 🏪 SaaS & Subscription
+- Trial 7 ngày → Paid plans (Basic, Pro, Yearly)
+- Thanh toán VNPay
+- Auto-activate sau payment thành công
+
+### 🛒 Sales (POS)
+- Quản lý sản phẩm + biến thể (size, color, SKU)
+- Tạo đơn hàng POS với auto-deduct stock
+- Cancel order + restore stock tự động
+- Phân quyền: Customer chỉ xem đơn của mình
+
+### 👥 HR
+- Quản lý nhân viên + Face data
+- Chấm công GPS + ảnh check-in
+- Giao việc với deadline + priority
+
+### 💎 CRM & Loyalty
+- Quản lý khách hàng (phone unique per store)
+- **Auto-earn** loyalty points khi tạo đơn hàng
+- **Auto-rank** upgrade: Bronze → Silver → Gold → Platinum
+- 3 loại rule: % order value, fixed/order, per quantity
+- Đổi điểm (redeem) + lịch sử giao dịch
+
+---
+
+## 📁 Cấu trúc thư mục
+
+```
+_360Retail-Backend/
+├── src/
+│   ├── ApiGateway/              # YARP Reverse Proxy
+│   ├── Services/
+│   │   ├── Identity/            # Auth, JWT, OAuth, Users
+│   │   ├── Saas/                # Stores, Subscriptions, VNPay
+│   │   ├── Sales/               # Products, Orders, POS
+│   │   ├── HR/                  # Employees, Timekeeping, Tasks
+│   │   └── CRM/                 # Customers, Loyalty, Points
+│   └── Shared/                  # Common middleware, utilities
+├── tests/                       # Unit & Integration tests
+├── init-db/                     # SQL init scripts (auto-run)
+├── docker-compose.yml
+└── .env.example
 ```
 
 ---
-*Created with ❤️ by Dokhacgiakhoa*
+
+## 🧪 Chạy Tests
+
+```bash
+cd tests/Services/CRM/CRM.Loyalty.Tests
+dotnet test --verbosity normal
+```
+
+> **Lưu ý:** Tests sử dụng [Testcontainers](https://dotnet.testcontainers.org/) nên cần Docker đang chạy.
+
+---
+
+## 👥 Team
+
+**EXE101 — FPT University**
+
+---
+
+*Last updated: 25/02/2026*

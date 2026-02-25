@@ -3,6 +3,7 @@ using _360Retail.Shared.Common.Middleware;
 using Microsoft.EntityFrameworkCore;
 using _360Retail.Services.Sales.Application.Interfaces;
 using _360Retail.Services.Sales.Infrastructure.Services;
+using _360Retail.Services.Sales.Infrastructure.HttpClients;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -75,6 +76,14 @@ builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+
+// CRM HttpClient for loyalty points
+builder.Services.AddHttpClient<ICrmClient, CrmClient>(client =>
+{
+    client.BaseAddress = new Uri(
+        builder.Configuration["ServiceUrls:CrmService"] ?? "http://crm-api:8080");
+    client.Timeout = TimeSpan.FromSeconds(5); // Don't wait too long
+});
 
 
 builder.Services.AddAuthentication(options =>
