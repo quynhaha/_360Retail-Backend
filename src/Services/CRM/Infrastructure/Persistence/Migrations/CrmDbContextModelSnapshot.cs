@@ -141,7 +141,7 @@ namespace _360Retail.Services.CRM.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Key");
 
-                    b.ToTable("IdempotencyRecords");
+                    b.ToTable("idempotency_records", "crm");
                 });
 
             modelBuilder.Entity("_360Retail.Services.CRM.Domain.Entities.LoyaltyHistory", b =>
@@ -193,7 +193,7 @@ namespace _360Retail.Services.CRM.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<decimal>("EarningRate")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("timestamp with time zone");
@@ -202,7 +202,7 @@ namespace _360Retail.Services.CRM.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<decimal>("MinSpend")
-                        .HasColumnType("numeric");
+                        .HasColumnType("decimal(18,4)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -226,7 +226,7 @@ namespace _360Retail.Services.CRM.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("LoyaltyRules");
+                    b.ToTable("loyalty_rules", "crm");
                 });
 
             modelBuilder.Entity("_360Retail.Services.CRM.Domain.Entities.LoyaltyTransaction", b =>
@@ -268,7 +268,10 @@ namespace _360Retail.Services.CRM.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("LoyaltyTransactions");
+                    b.HasIndex("OrderId")
+                        .IsUnique();
+
+                    b.ToTable("loyalty_transactions", "crm");
                 });
 
             modelBuilder.Entity("_360Retail.Services.CRM.Domain.Entities.CustomerFeedback", b =>
