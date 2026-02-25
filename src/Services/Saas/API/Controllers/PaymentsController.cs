@@ -86,11 +86,10 @@ public class PaymentsController : ControllerBase
 
         if (!isValid)
         {
-            return BadRequest(new PaymentResultDto(
-                false,
-                Guid.Empty,
-                "Invalid signature from VNPay"
-            ));
+            var frontendUrlInvalid = _config["ServiceUrls:FrontendUrl"] ?? "http://localhost:3000";
+            var invalidMessage = "Invalid signature from VNPay";
+            var invalidRedirect = $"{frontendUrlInvalid}/payment/failed?paymentId={Guid.Empty}&message={Uri.EscapeDataString(invalidMessage)}";
+            return Redirect(invalidRedirect);
         }
 
         var frontendUrl = _config["ServiceUrls:FrontendUrl"] ?? "http://localhost:3000";
@@ -108,21 +107,15 @@ public class PaymentsController : ControllerBase
                 {
                     await _identityClient.ActivateUserSubscriptionAsync(userId.Value);
                 }
-                
-                return Ok(new PaymentResultDto(
-                    true,
-                    paymentId,
-                    "Thanh toán thành công! Gói dịch vụ đã được kích hoạt.",
-                    $"{frontendUrl}/payment/success?paymentId={paymentId}"
-                ));
+
+                var successRedirect = $"{frontendUrl}/payment/success?paymentId={paymentId}";
+                return Redirect(successRedirect);
             }
             else
             {
-                return BadRequest(new PaymentResultDto(
-                    false,
-                    paymentId,
-                    "Không tìm thấy thông tin thanh toán"
-                ));
+                var notFoundMessage = "Không tìm thấy thông tin thanh toán";
+                var notFoundRedirect = $"{frontendUrl}/payment/failed?paymentId={paymentId}&message={Uri.EscapeDataString(notFoundMessage)}";
+                return Redirect(notFoundRedirect);
             }
         }
         else
@@ -131,12 +124,8 @@ public class PaymentsController : ControllerBase
             var errorMessage = GetVNPayErrorMessage(transactionStatus);
             await _subscriptionService.MarkPaymentFailedAsync(paymentId, errorMessage);
 
-            return Ok(new PaymentResultDto(
-                false,
-                paymentId,
-                errorMessage,
-                $"{frontendUrl}/payment/failed?paymentId={paymentId}"
-            ));
+            var failedRedirect = $"{frontendUrl}/payment/failed?paymentId={paymentId}&message={Uri.EscapeDataString(errorMessage)}";
+            return Redirect(failedRedirect);
         }
     }
 

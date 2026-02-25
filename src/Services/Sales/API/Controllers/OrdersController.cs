@@ -8,7 +8,7 @@ using _360Retail.Services.Sales.API.Filters;
 namespace _360Retail.Services.Sales.API.Controllers;
 
 [Authorize(Roles = "StoreOwner,Manager,Staff,Customer")]
-[Route("api/sales/orders")]
+[Route("api/orders")]
 [RequiresActiveSubscription]  // Block writes for expired trials
 public class OrdersController : BaseApiController
 {

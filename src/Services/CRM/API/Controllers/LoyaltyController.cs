@@ -12,7 +12,7 @@ using _360Retail.Services.CRM.Application.Interfaces;
 namespace _360Retail.Services.CRM.API.Controllers;
 
 [ApiController]
-[Route("api/v1")]
+[Route("api")]
 [Authorize(Roles = "StoreOwner,Manager")]
 public class LoyaltyController : ControllerBase
 {
@@ -77,6 +77,23 @@ public class LoyaltyController : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("loyalty-rules/{id}")]
+    public async Task<IActionResult> UpdateRule(Guid id, [FromBody] UpdateLoyaltyRuleDto dto)
+    {
+        var rule = await _ruleRepo.GetByIdAsync(id);
+        if (rule == null || rule.StoreId != GetStoreIdFromToken()) return NotFound();
+
+        rule.Name = dto.Name;
+        rule.EarningRate = dto.EarningRate;
+        rule.MinSpend = dto.MinSpend;
+        rule.StartDate = dto.StartDate;
+        rule.EndDate = dto.EndDate;
+
+        await _ruleRepo.UpdateAsync(rule);
+        var responseDto = _mapper.Map<LoyaltyRuleDto>(rule);
+        return Ok(new { data = responseDto });
+    }
+
     // --- CUSTOMER LOYALTY ---
 
     [HttpGet("customers/{customerId}/loyalty-summary")]
@@ -105,13 +122,6 @@ public class LoyaltyController : ControllerBase
     {
         if (customerId != request.CustomerId) return BadRequest("Customer ID mismatch");
 
-        // Use store ID from token if required by ProcessRedeemPointsAsync. Wait, we should attach it.
-        // Wait, request struct doesn't have StoreId anymore. I will need to set it or modify it. 
-        // Actually LoyaltyService ProcessRedeemPointsAsync takes a RedeemPointsRequestDto but we removed StoreId from DTOs.
-        // I will change the controller to just pass what it has. Since RedeemPointsRequestDto doesn't have StoreId, 
-        // maybe the service needs adaptation? I'll check my CrmDtos.cs replacement.
-        // I'll keep this simple and let the C# compiler complain if I missed a field, then I'll fix it.
-        
         try
         {
             await _loyaltyService.ProcessRedeemPointsAsync(GetStoreIdFromToken(), request);
@@ -127,22 +137,13 @@ public class LoyaltyController : ControllerBase
         }
     }
 
-    // --- INTERNAL / SALES INTEGRATION ---
+    // --- INTERNAL: Called by Sales Service after order completion ---
 
     [HttpPost("loyalty/earn-from-order")]
     public async Task<IActionResult> EarnFromOrder([FromBody] EarnPointsRequestDto request)
     {
         try
         {
-            // The loyalty service currently expects EarnPointsRequestDto. Since I removed StoreId from it, 
-            // I need to either put it back or pass StoreId separately. I will pass the StoreId from token.
-            // Wait, does ProcessEarnPointsAsync take StoreId as parameter or inside DTO? 
-            // The DTO had it. Let's fix the request by setting it. Wait, the DTO doesn't have StoreId property at all anymore.
-            // I will use another tool to fix LoyaltyService to take storeId as parameter.
-            // For now, I'll pass storeId alongside request. Wait, DTO was already defined without StoreId.
-            // Let's modify EarnPointsRequestDto implicitly again or just pass GetStoreIdFromToken() into service.
-            
-            // Assuming I will update LoyaltyService to: Task ProcessEarnPointsAsync(Guid storeId, EarnPointsRequestDto request)
             await _loyaltyService.ProcessEarnPointsAsync(GetStoreIdFromToken(), request);
             return Ok(new { message = "Points processed" });
         }

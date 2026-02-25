@@ -1,18 +1,24 @@
 using _360Retail.Services.Sales.Application.DTOs;
 using _360Retail.Services.Sales.Application.Interfaces;
 using _360Retail.Services.Sales.Domain.Entities;
+using _360Retail.Services.Sales.Infrastructure.HttpClients;
 using _360Retail.Services.Sales.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace _360Retail.Services.Sales.Infrastructure.Services;
 
 public class OrderService : IOrderService
 {
     private readonly SalesDbContext _db;
+    private readonly ICrmClient _crmClient;
+    private readonly ILogger<OrderService> _logger;
 
-    public OrderService(SalesDbContext db)
+    public OrderService(SalesDbContext db, ICrmClient crmClient, ILogger<OrderService> logger)
     {
         _db = db;
+        _crmClient = crmClient;
+        _logger = logger;
     }
 
     private class IdWrapper { public Guid Id { get; set; } }
@@ -135,7 +141,23 @@ public class OrderService : IOrderService
 
         _db.Orders.Add(order);
         await _db.SaveChangesAsync();
-        
+
+        // Auto-earn loyalty points (fire-and-forget, won't fail the order)
+        if (order.CustomerId.HasValue)
+        {
+            try
+            {
+                var totalQty = order.OrderItems.Sum(x => x.Quantity);
+                await _crmClient.EarnPointsFromOrderAsync(
+                    storeId, order.CustomerId.Value,
+                    order.Id, order.TotalAmount, totalQty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to earn loyalty points for Order {OrderId}", order.Id);
+            }
+        }
+
         return order.Id;
     }
 
