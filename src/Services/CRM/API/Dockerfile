@@ -9,6 +9,7 @@ COPY ["src/Services/CRM/API/_360Retail.Services.CRM.API.csproj", "src/Services/C
 COPY ["src/Services/CRM/Application/_360Retail.Services.CRM.Application.csproj", "src/Services/CRM/Application/"]
 COPY ["src/Services/CRM/Domain/_360Retail.Services.CRM.Domain.csproj", "src/Services/CRM/Domain/"]
 COPY ["src/Services/CRM/Infrastructure/_360Retail.Services.CRM.Infrastructure.csproj", "src/Services/CRM/Infrastructure/"]
+COPY ["src/Shared/_360Retail.Shared.csproj", "src/Shared/"]
 
 RUN dotnet restore "src/Services/CRM/API/_360Retail.Services.CRM.API.csproj"
 COPY . .

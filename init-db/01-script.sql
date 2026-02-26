@@ -585,8 +585,37 @@ CREATE TABLE IF NOT EXISTS crm.loyalty_transactions (
 CREATE UNIQUE INDEX IF NOT EXISTS "IX_loyalty_transactions_OrderId" ON crm.loyalty_transactions ("OrderId");
 CREATE INDEX IF NOT EXISTS "IX_loyalty_transactions_CustomerId" ON crm.loyalty_transactions ("CustomerId");
 
--- 25/2/2026: Add missing columns to crm.customers (required by Customer entity)
 ALTER TABLE crm.customers
 ADD COLUMN IF NOT EXISTS last_purchase_date TIMESTAMP,
 ADD COLUMN IF NOT EXISTS rank VARCHAR(50),
 ADD COLUMN IF NOT EXISTS zalo_id VARCHAR(100);
+
+-- 26/2/2026: Inventory Management - Update inventory_tickets table
+ALTER TABLE sales.inventory_tickets
+ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'Draft',
+ADD COLUMN IF NOT EXISTS total_quantity INT DEFAULT 0,
+ADD COLUMN IF NOT EXISTS confirmed_by_employee_id UUID REFERENCES hr.employees(id),
+ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMP,
+ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+
+-- Set status for existing tickets if any
+UPDATE sales.inventory_tickets
+SET status = 'Draft'
+WHERE status IS NULL;
+
+-- 26/2/2026: Inventory Management - Create inventory_ticket_items table
+CREATE TABLE IF NOT EXISTS sales.inventory_ticket_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    ticket_id UUID NOT NULL REFERENCES sales.inventory_tickets(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES sales.products(id),
+    product_variant_id UUID REFERENCES sales.product_variants(id),
+    quantity INT NOT NULL,
+    note VARCHAR(500)
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_ticket_items_ticket
+ON sales.inventory_ticket_items(ticket_id);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_tickets_store
+ON sales.inventory_tickets(store_id);
+

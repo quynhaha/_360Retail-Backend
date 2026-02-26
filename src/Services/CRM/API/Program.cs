@@ -10,6 +10,7 @@ using _360Retail.Services.CRM.Application.Services;
 using _360Retail.Services.CRM.Application.Interfaces;
 using _360Retail.Services.CRM.Application.Mappings;
 using _360Retail.Services.CRM.API.Middleware;
+using _360Retail.Shared.Common.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -98,6 +99,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Protect internal APIs with shared key
+app.UseInternalApiKeyProtection();
 
 app.UseMiddleware<IdempotencyMiddleware>(); // Add Idempotency Middleware
 

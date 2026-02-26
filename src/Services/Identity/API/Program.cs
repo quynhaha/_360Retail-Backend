@@ -28,6 +28,10 @@ builder.Services.AddHttpClient("HrService", client =>
 {
     var baseUrl = builder.Configuration["ServiceUrls:HrService"] ?? "http://localhost:5280";
     client.BaseAddress = new Uri(baseUrl);
+
+    // Add internal API key for cross-service authentication
+    var internalKey = builder.Configuration["InternalApi:Key"] ?? "360retail-internal-secret-key";
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalKey);
 });
 
 // Named HttpClient for SaaS Service (for trial store creation)
@@ -37,6 +41,10 @@ builder.Services.AddHttpClient("SaasService", client =>
     // Fallback to localhost for local dev without Docker
     var baseUrl = builder.Configuration["ServiceUrls:SaasService"] ?? "http://saas-api:8080"; 
     client.BaseAddress = new Uri(baseUrl);
+
+    // Add internal API key for cross-service authentication
+    var internalKey = builder.Configuration["InternalApi:Key"] ?? "360retail-internal-secret-key";
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalKey);
 });
 
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
@@ -145,6 +153,9 @@ var app = builder.Build();
 #region ===== MIDDLEWARE =====
 // Global Exception Handler - must be first
 app.UseGlobalExceptionHandler();
+
+// Protect internal APIs with shared key
+app.UseInternalApiKeyProtection();
 
 if (app.Environment.IsDevelopment())
 {

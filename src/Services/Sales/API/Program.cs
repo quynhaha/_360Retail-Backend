@@ -76,6 +76,8 @@ builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // CRM HttpClient for loyalty points
 builder.Services.AddHttpClient<ICrmClient, CrmClient>(client =>

@@ -84,7 +84,8 @@ public class AuthService : IAuthService
         var user = new AppUser
         {
             Email = dto.Email,
-            UserName = dto.Email,
+            UserName = dto.FullName ?? dto.Email,
+            PhoneNumber = dto.PhoneNumber,
             Status = "Registered",  // Not trial yet, waiting for StartTrial
             IsActivated = true,
             MustChangePassword = false

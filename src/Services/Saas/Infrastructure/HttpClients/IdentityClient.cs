@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace _360Retail.Services.Saas.Infrastructure.HttpClients;
 
@@ -7,9 +8,13 @@ public class IdentityClient : IIdentityClient
 {
     private readonly HttpClient _http;
 
-    public IdentityClient(HttpClient http)
+    public IdentityClient(HttpClient http, IConfiguration config)
     {
         _http = http;
+
+        // Add internal API key for cross-service authentication
+        var internalKey = config["InternalApi:Key"] ?? "360retail-internal-secret-key";
+        _http.DefaultRequestHeaders.Add("X-Internal-Key", internalKey);
     }
 
     public async Task AssignStoreAsync(string accessToken, Guid storeId)
