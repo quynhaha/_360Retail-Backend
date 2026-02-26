@@ -23,6 +23,10 @@ builder.Services.AddHttpClient("IdentityService", client =>
 {
     var baseUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5297";
     client.BaseAddress = new Uri(baseUrl);
+
+    // Add internal API key for cross-service authentication
+    var internalKey = builder.Configuration["InternalApi:Key"] ?? "360retail-internal-secret-key";
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalKey);
 });
 #endregion
 
@@ -116,6 +120,9 @@ var app = builder.Build();
 #region ===== MIDDLEWARE =====
 // Global Exception Handler - must be first
 app.UseGlobalExceptionHandler();
+
+// Protect internal APIs with shared key
+app.UseInternalApiKeyProtection();
 
 if (app.Environment.IsDevelopment())
 {

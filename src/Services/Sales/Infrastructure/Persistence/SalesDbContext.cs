@@ -20,6 +20,8 @@ public partial class SalesDbContext : DbContext
 
     public virtual DbSet<InventoryTicket> InventoryTickets { get; set; }
 
+    public virtual DbSet<InventoryTicketItem> InventoryTicketItems { get; set; }
+
     public virtual DbSet<Order> Orders { get; set; }
 
     public virtual DbSet<OrderItem> OrderItems { get; set; }
@@ -51,6 +53,28 @@ public partial class SalesDbContext : DbContext
 
             entity.Property(e => e.Id).HasDefaultValueSql("uuid_generate_v4()");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.Property(e => e.Status).HasDefaultValue("Draft");
+        });
+
+        modelBuilder.Entity<InventoryTicketItem>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("inventory_ticket_items_pkey");
+
+            entity.Property(e => e.Id).HasDefaultValueSql("uuid_generate_v4()");
+
+            entity.HasOne(d => d.Ticket).WithMany(p => p.Items)
+                .HasForeignKey(d => d.TicketId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("inventory_ticket_items_ticket_id_fkey");
+
+            entity.HasOne(d => d.Product).WithMany()
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("inventory_ticket_items_product_id_fkey");
+
+            entity.HasOne(d => d.ProductVariant).WithMany()
+                .HasForeignKey(d => d.ProductVariantId)
+                .HasConstraintName("inventory_ticket_items_variant_id_fkey");
         });
 
         modelBuilder.Entity<Order>(entity =>

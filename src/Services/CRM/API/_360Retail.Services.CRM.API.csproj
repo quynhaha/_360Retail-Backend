@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Application\_360Retail.Services.CRM.Application.csproj" />
     <ProjectReference Include="..\Infrastructure\_360Retail.Services.CRM.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\..\Shared\_360Retail.Shared.csproj" />
   </ItemGroup>
 
 </Project>
