@@ -619,3 +619,8 @@ CREATE TABLE IF NOT EXISTS saas.plan_reviews (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, plan_id)  -- 1 review per user per plan
 );
+
+-- 28/02/2026: Forgot Password - Password reset code and expiry
+ALTER TABLE identity.app_users
+ADD COLUMN IF NOT EXISTS password_reset_code VARCHAR(10),
+ADD COLUMN IF NOT EXISTS password_reset_expiry TIMESTAMPTZ;

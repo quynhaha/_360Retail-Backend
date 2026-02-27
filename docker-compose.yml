@@ -40,6 +40,9 @@ services:
       - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID}
       - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET}
       - InternalApi__Key=360retail-internal-secret-key-2026
+      # Resend (Email Service)
+      - Resend__ApiKey=${RESEND_API_KEY}
+      - Resend__FromEmail=${RESEND_FROM_EMAIL}
     ports:
       - "5297:8080"
     depends_on:
@@ -57,6 +60,9 @@ services:
       - ConnectionStrings__SaasDb=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
       - ServiceUrls__IdentityService=http://identity-api:8080
       - InternalApi__Key=360retail-internal-secret-key-2026
+      # Resend (Email Service)
+      - Resend__ApiKey=${RESEND_API_KEY}
+      - Resend__FromEmail=${RESEND_FROM_EMAIL}
     ports:
       - "5031:8080"
     depends_on:
@@ -78,6 +84,9 @@ services:
       - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET}
       - ServiceUrls__CrmService=http://crm-api:8080
       - InternalApi__Key=360retail-internal-secret-key-2026
+      # Resend (Email Service)
+      - Resend__ApiKey=${RESEND_API_KEY}
+      - Resend__FromEmail=${RESEND_FROM_EMAIL}
     ports:
       - "5091:8080"
     depends_on:

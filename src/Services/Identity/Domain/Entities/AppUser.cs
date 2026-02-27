@@ -61,5 +61,12 @@ public partial class AppUser
 
     public virtual ICollection<UserStoreAccess> StoreAccesses { get; set; }
         = new List<UserStoreAccess>();
+
+    // Forgot Password fields
+    [Column("password_reset_code")]
+    public string? PasswordResetCode { get; set; }
+    
+    [Column("password_reset_expiry")]
+    public DateTime? PasswordResetExpiry { get; set; }
 }
 

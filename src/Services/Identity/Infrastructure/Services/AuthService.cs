@@ -669,5 +669,56 @@ public class AuthService : IAuthService
         string? Iss,     // Issuer
         string? Exp      // Expiration (as string)
     );
+
+    // ==================== FORGOT PASSWORD ====================
+    
+    public async Task ForgotPasswordAsync(string email)
+    {
+        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Email == email && u.IsActivated);
+        
+        if (user == null)
+        {
+            // Don't reveal if email exists or not (security)
+            return;
+        }
+
+        // Generate 6-digit reset code
+        var resetCode = Random.Shared.Next(100000, 999999).ToString();
+        user.PasswordResetCode = resetCode;
+        user.PasswordResetExpiry = DateTime.UtcNow.AddMinutes(15);
+        
+        await _db.SaveChangesAsync();
+
+        // Send branded email
+        await _emailService.SendForgotPasswordEmailAsync(
+            user.Email,
+            user.UserName ?? user.Email,
+            resetCode,
+            15
+        );
+    }
+
+    public async Task ResetPasswordAsync(string email, string resetCode, string newPassword)
+    {
+        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Email == email && u.IsActivated);
+        
+        if (user == null)
+            throw new Exception("Invalid email");
+
+        if (string.IsNullOrEmpty(user.PasswordResetCode) || user.PasswordResetCode != resetCode)
+            throw new Exception("Invalid reset code");
+
+        if (user.PasswordResetExpiry == null || user.PasswordResetExpiry < DateTime.UtcNow)
+            throw new Exception("Reset code has expired. Please request a new one");
+
+        // Update password
+        user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+        user.PasswordResetCode = null;
+        user.PasswordResetExpiry = null;
+        user.MustChangePassword = false;
+        
+        await _db.SaveChangesAsync();
+    }
 }
+
 
