@@ -34,6 +34,7 @@ builder.Services.AddHttpClient("IdentityService", client =>
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<ITimekeepingService, TimekeepingService>();
 builder.Services.AddHttpClient<IEmailService, ResendEmailService>();
 #endregion
 

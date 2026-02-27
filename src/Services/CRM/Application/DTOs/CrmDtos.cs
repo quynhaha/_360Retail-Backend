@@ -141,3 +141,67 @@ public class UpdateCustomerDto
     [MaxLength(100)]
     public string? ZaloId { get; set; }
 }
+
+// --- Feedback DTOs ---
+
+public class CreateFeedbackDto
+{
+    [Required(ErrorMessage = "CustomerId là bắt buộc")]
+    public Guid CustomerId { get; set; }
+
+    [Required(ErrorMessage = "Nội dung feedback là bắt buộc")]
+    [MaxLength(2000, ErrorMessage = "Nội dung tối đa 2000 ký tự")]
+    public string Content { get; set; } = null!;
+
+    [Required(ErrorMessage = "Rating là bắt buộc")]
+    [Range(1, 5, ErrorMessage = "Rating phải từ 1 đến 5")]
+    public int Rating { get; set; }
+
+    /// <summary>
+    /// Source: "InStore", "Phone", "Zalo", "App"
+    /// </summary>
+    [MaxLength(50)]
+    public string? Source { get; set; }
+}
+
+/// <summary>
+/// DTO for QR Code based public feedback (no auth required)
+/// </summary>
+public class CreatePublicFeedbackDto
+{
+    [Required(ErrorMessage = "CustomerId là bắt buộc")]
+    public Guid CustomerId { get; set; }
+
+    [Required(ErrorMessage = "StoreId là bắt buộc")]
+    public Guid StoreId { get; set; }
+
+    [Required(ErrorMessage = "Rating là bắt buộc")]
+    [Range(1, 5, ErrorMessage = "Rating phải từ 1 đến 5")]
+    public int Rating { get; set; }
+
+    [MaxLength(2000, ErrorMessage = "Nội dung tối đa 2000 ký tự")]
+    public string? Content { get; set; }
+}
+
+public class FeedbackDto
+{
+    public Guid Id { get; set; }
+    public Guid CustomerId { get; set; }
+    public string? CustomerName { get; set; }
+    public string? Content { get; set; }
+    public int Rating { get; set; }
+    public string? Source { get; set; }
+    public Guid? CreatedByEmployeeId { get; set; }
+    public DateTime? CreatedAt { get; set; }
+}
+
+public class FeedbackSummaryDto
+{
+    public double AvgRating { get; set; }
+    public int TotalCount { get; set; }
+    
+    /// <summary>
+    /// Rating distribution: key = rating (1-5), value = count
+    /// </summary>
+    public Dictionary<int, int> Distribution { get; set; } = new();
+}

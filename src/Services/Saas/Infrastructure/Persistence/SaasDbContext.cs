@@ -15,6 +15,7 @@ public partial class SaasDbContext : DbContext
     public virtual DbSet<ServicePlan> ServicePlans { get; set; }
     public virtual DbSet<Subscription> Subscriptions { get; set; }
     public virtual DbSet<Payment> Payments { get; set; }
+    public virtual DbSet<PlanReview> PlanReviews { get; set; }
 
     // ===== Mapping =====
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -51,6 +52,9 @@ public partial class SaasDbContext : DbContext
                 .HasColumnType("timestamptz")
                 .HasColumnName("created_at")
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.Property(e => e.Latitude).HasColumnName("latitude");
+            entity.Property(e => e.Longitude).HasColumnName("longitude");
         });
 
         // ServicePlan
@@ -187,6 +191,37 @@ public partial class SaasDbContext : DbContext
                 .WithMany(p => p.Payments)
                 .HasForeignKey(d => d.SubscriptionId)
                 .HasConstraintName("payments_subscription_id_fkey");
+        });
+
+        // PlanReview
+        modelBuilder.Entity<PlanReview>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.ToTable("plan_reviews");
+
+            entity.Property(e => e.Id)
+                .HasColumnName("id")
+                .HasDefaultValueSql("uuid_generate_v4()");
+
+            entity.Property(e => e.PlanId).HasColumnName("plan_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.StoreId).HasColumnName("store_id");
+            entity.Property(e => e.Rating).HasColumnName("rating");
+            entity.Property(e => e.Content).HasColumnName("content");
+            entity.Property(e => e.CreatedAt)
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => new { e.UserId, e.PlanId }).IsUnique();
+
+            entity.HasOne(d => d.Plan)
+                .WithMany()
+                .HasForeignKey(d => d.PlanId);
+
+            entity.HasOne(d => d.Store)
+                .WithMany()
+                .HasForeignKey(d => d.StoreId);
         });
     }
 }

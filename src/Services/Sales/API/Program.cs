@@ -11,13 +11,10 @@ using Microsoft.OpenApi.Models;
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 var connString = builder.Configuration.GetConnectionString("DefaultConnection");
-Console.BackgroundColor = ConsoleColor.Blue;
-Console.ForegroundColor = ConsoleColor.White;
-Console.WriteLine($"\n==================================================");
-Console.WriteLine($"[DEBUG] CODE ĐANG KẾT NỐI ĐẾN DATABASE NÀY:");
-Console.WriteLine($"👉 {connString}"); 
-Console.WriteLine($"==================================================\n");
-Console.ResetColor();
+builder.Logging.AddConsole();
+var startupLogger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger("Startup");
+startupLogger.LogInformation("Sales API connecting to database: {ConnectionString}", connString);
+
 
 builder.Services.AddDbContext<SalesDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));

@@ -83,6 +83,11 @@ public partial class CrmDbContext : DbContext
                 .HasMaxLength(50)
                 .HasColumnName("source");
             entity.Property(e => e.StoreId).HasColumnName("store_id");
+            entity.Property(e => e.OrderId).HasColumnName("order_id");
+
+            entity.HasIndex(e => e.OrderId)
+                .IsUnique()
+                .HasFilter("order_id IS NOT NULL");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.CustomerFeedbacks)
                 .HasForeignKey(d => d.CustomerId)

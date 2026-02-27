@@ -14,10 +14,12 @@ namespace _360Retail.Services.Identity.API.Controllers;
 public class InternalController : ControllerBase
 {
     private readonly IdentityDbContext _db;
+    private readonly ILogger<InternalController> _logger;
 
-    public InternalController(IdentityDbContext db)
+    public InternalController(IdentityDbContext db, ILogger<InternalController> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     /// <summary>
@@ -69,11 +71,11 @@ public class InternalController : ControllerBase
     [HttpPut("users/{userId}/stores/{storeId}/role")]
     public async Task<IActionResult> UpdateUserRoleInStore(Guid userId, Guid storeId, [FromBody] UpdateRoleDto dto)
     {
-        Console.WriteLine($"[DEBUG] UpdateUserRoleInStore called: userId={userId}, storeId={storeId}, dto.RoleInStore={dto?.RoleInStore ?? "NULL"}");
+        _logger.LogDebug("UpdateUserRoleInStore called: userId={UserId}, storeId={StoreId}, RoleInStore={RoleInStore}", userId, storeId, dto?.RoleInStore ?? "NULL");
         
         if (dto == null || string.IsNullOrEmpty(dto.RoleInStore))
         {
-            Console.WriteLine("[DEBUG] DTO is null or RoleInStore is empty");
+            _logger.LogDebug("DTO is null or RoleInStore is empty");
             return BadRequest(new { success = false, message = "RoleInStore is required" });
         }
         
@@ -81,7 +83,7 @@ public class InternalController : ControllerBase
         var access = await _db.UserStoreAccess
             .FirstOrDefaultAsync(a => a.UserId == userId && a.StoreId == storeId);
         
-        Console.WriteLine($"[DEBUG] Found access record: {(access != null ? $"Yes, current role={access.RoleInStore}" : "No")}");
+        _logger.LogDebug("Found access record: {Found}", access != null ? $"Yes, current role={access.RoleInStore}" : "No");
         
         if (access == null)
             return NotFound(new { success = false, message = "User store access not found" });
@@ -90,11 +92,11 @@ public class InternalController : ControllerBase
         var validRoles = new[] { "Staff", "Manager", "Owner" };
         if (!validRoles.Contains(dto.RoleInStore))
         {
-            Console.WriteLine($"[DEBUG] Invalid role: {dto.RoleInStore}");
+            _logger.LogDebug("Invalid role: {Role}", dto.RoleInStore);
             return BadRequest(new { success = false, message = "Invalid role. Must be: Staff, Manager, or Owner" });
         }
 
-        Console.WriteLine($"[DEBUG] Updating RoleInStore from {access.RoleInStore} to {dto.RoleInStore}");
+        _logger.LogDebug("Updating RoleInStore from {OldRole} to {NewRole}", access.RoleInStore, dto.RoleInStore);
         access.RoleInStore = dto.RoleInStore;
 
         // 2. Sync system role in user_roles table
@@ -107,7 +109,7 @@ public class InternalController : ControllerBase
             _ => "Staff"
         };
 
-        Console.WriteLine($"[DEBUG] Syncing system role to: {systemRoleName}");
+        _logger.LogDebug("Syncing system role to: {SystemRoleName}", systemRoleName);
 
         // Get the user with their roles
         var user = await _db.AppUsers
@@ -129,24 +131,24 @@ public class InternalController : ControllerBase
                 foreach (var role in rolesToRemove)
                 {
                     user.Roles.Remove(role);
-                    Console.WriteLine($"[DEBUG] Removed old system role: {role.RoleName}");
+                    _logger.LogDebug("Removed old system role: {RoleName}", role.RoleName);
                 }
 
                 // Add new role if not already present
                 if (!user.Roles.Any(r => r.RoleName == systemRoleName))
                 {
                     user.Roles.Add(targetRole);
-                    Console.WriteLine($"[DEBUG] Added new system role: {systemRoleName}");
+                    _logger.LogDebug("Added new system role: {RoleName}", systemRoleName);
                 }
             }
             else
             {
-                Console.WriteLine($"[DEBUG] Warning: System role '{systemRoleName}' not found in app_roles table");
+                _logger.LogWarning("System role '{SystemRoleName}' not found in app_roles table", systemRoleName);
             }
         }
 
         await _db.SaveChangesAsync();
-        Console.WriteLine($"[DEBUG] Role updated successfully! RoleInStore={dto.RoleInStore}, SystemRole={systemRoleName}");
+        _logger.LogInformation("Role updated successfully: RoleInStore={RoleInStore}, SystemRole={SystemRole}", dto.RoleInStore, systemRoleName);
 
         return Ok(new { 
             success = true, 

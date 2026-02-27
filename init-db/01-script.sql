@@ -336,31 +336,7 @@ SELECT
 WHERE NOT EXISTS (
     SELECT 1 FROM identity.app_users WHERE email = 'admin');
 
--- Script thêm admin 
-INSERT INTO identity.app_users (
-    id,
-    user_name,
-    email,
-    password_hash,
-    phone_number,
-    store_id,
-    status,
-    is_activated,
-    created_at
-)
-SELECT
-    uuid_generate_v4(),
-    'admin',
-    'admin',
-    'pmWkWSBCL51Bfkhn79xPuKBKHz//H6B+mY6G9/eieuM=',
-    NULL,
-    NULL,
-    'Active',
-    TRUE,
-    NOW()
-WHERE NOT EXISTS (
-    SELECT 1 FROM identity.app_users WHERE email = 'admin'
-);
+
 
 INSERT INTO identity.user_roles (user_id, role_id)
 SELECT u.id, r.id
@@ -619,3 +595,27 @@ ON sales.inventory_ticket_items(ticket_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_tickets_store
 ON sales.inventory_tickets(store_id);
 
+-- 27/02/2026: Add GPS coordinates to stores for timekeeping geofencing
+ALTER TABLE saas.stores
+ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+
+-- 27/02/2026: Add order_id to customer_feedbacks for QR-based public feedback
+ALTER TABLE crm.customer_feedbacks
+ADD COLUMN IF NOT EXISTS order_id UUID;
+
+-- Unique: 1 feedback per order
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customer_feedbacks_order_id
+ON crm.customer_feedbacks(order_id) WHERE order_id IS NOT NULL;
+
+-- 27/02/2026: Plan reviews - Store owners review subscription plans
+CREATE TABLE IF NOT EXISTS saas.plan_reviews (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plan_id UUID NOT NULL REFERENCES saas.service_plans(id),
+    user_id UUID NOT NULL,
+    store_id UUID NOT NULL REFERENCES saas.stores(id),
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, plan_id)  -- 1 review per user per plan
+);

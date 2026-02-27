@@ -13,6 +13,12 @@ public class Store
     public string? Address { get; set; }
     public string? Phone { get; set; }
 
+    [Column("latitude")]
+    public double? Latitude { get; set; }
+
+    [Column("longitude")]
+    public double? Longitude { get; set; }
+
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 

@@ -71,6 +71,7 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
 builder.Services.AddScoped<IStoreService, StoreService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddSingleton<VNPayService>();
+builder.Services.AddScoped<IPlanReviewService, PlanReviewService>();
 
 // HTTP Client -> Identity Service
 var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] 
