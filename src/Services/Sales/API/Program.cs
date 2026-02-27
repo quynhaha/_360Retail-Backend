@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using _360Retail.Services.Sales.Application.Interfaces;
 using _360Retail.Services.Sales.Infrastructure.Services;
 using _360Retail.Services.Sales.Infrastructure.HttpClients;
+using _360Retail.Shared.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -75,6 +76,9 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+// Shared Email Services (for low stock notifications)
+builder.Services.AddSharedEmailServices();
 
 // CRM HttpClient for loyalty points
 builder.Services.AddHttpClient<ICrmClient, CrmClient>(client =>

@@ -1,5 +1,6 @@
 ﻿using _360Retail.Services.Identity.Application.Interfaces;
 using _360Retail.Shared.Common.Middleware;
+using _360Retail.Shared.Email;
 using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
@@ -47,6 +48,7 @@ builder.Services.AddHttpClient("SaasService", client =>
     client.DefaultRequestHeaders.Add("X-Internal-Key", internalKey);
 });
 
+builder.Services.AddSharedEmailServices();
 builder.Services.AddScoped<IEmailService, ResendEmailService>();
 #endregion
 

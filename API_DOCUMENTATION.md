@@ -1,7 +1,7 @@
 # 360Retail - Hướng Dẫn Sử Dụng API
 
 > **Tài liệu hướng dẫn thực hành cho Frontend Team**  
-> Cập nhật: 27/02/2026  
+> Cập nhật: 28/02/2026  
 > **Swagger UI**: http://localhost:5001/swagger (khi Docker đang chạy)
 
 ---
@@ -31,6 +31,8 @@
 | 14 | POST | `/identity/admin/users` | SuperAdmin | Tạo user (admin) |
 | 15 | PUT | `/identity/admin/users/{id}` | SuperAdmin | Sửa user |
 | 16 | DELETE | `/identity/admin/users/{id}` | SuperAdmin | Xóa user |
+| 99 | POST | `/identity/auth/forgot-password` | ❌ | Gửi mã reset 6 số qua email |
+| 100 | POST | `/identity/auth/reset-password` | ❌ | Đặt lại mật khẩu bằng mã |
 
 ### 🏪 SaaS Service (`/saas`)
 
@@ -53,6 +55,8 @@
 | 31 | GET | `/saas/plan-reviews/me/{planId}` | ✅ | Xem review của tôi |
 | 32 | GET | `/saas/plan-reviews/plan/{planId}` | ❌ | DS reviews 1 gói (public) |
 | 33 | GET | `/saas/plan-reviews/plan/{planId}/summary` | ❌ | Tổng hợp rating 1 gói |
+| 102 | POST | `/saas/subscriptions/check-expiry` | SuperAdmin | Check & gửi email sắp hết hạn |
+| 103 | GET | `/saas/subscriptions/my-expiry` | ✅ Owner | Xem trạng thái hết hạn subscription |
 | 34 | GET | `/saas/plan-reviews/summary` | ❌ | Tổng hợp tất cả gói (trang Pricing) |
 | 35 | GET | `/saas/plan-reviews/admin` | SuperAdmin | DS reviews toàn hệ thống |
 | 36 | GET | `/saas/plan-reviews/admin/dashboard` | SuperAdmin | Dashboard thống kê reviews |
@@ -88,6 +92,7 @@
 | 61 | GET | `/sales/dashboard/order-status` | ✅ Owner | Phân bổ trạng thái đơn |
 | 62 | GET | `/sales/dashboard/inventory-summary` | ✅ Owner | Tổng quan tồn kho |
 | 63 | GET | `/sales/dashboard/recent-activity` | ✅ Owner | Hoạt động gần đây |
+| 101 | POST | `/sales/notifications/low-stock-check` | ✅ Owner/Manager | Check & gửi email cảnh báo tồn kho |
 
 ### 👥 CRM Service (`/crm`)
 
@@ -144,8 +149,8 @@ Trong thư mục `docs/` có 2 file:
 
 | File | Import cách nào |
 |------|----------------|
-| `360Retail.postman_collection.json` | Postman → **Import** → chọn file |
-| `360Retail.postman_environment.json` | Postman → **Import** → chọn file |
+| `360Retail.postman_collection.json` | Postman → Collection → **Import** → chọn file |
+| `360Retail.postman_environment.json` | Postman → Environment → **Import** → chọn file |
 
 ### Bước 2: Chọn Environment
 
@@ -1214,6 +1219,82 @@ POST /hr/timekeeping/check-out
   "locationGps": "10.7780,106.7015"
 }
 ```
+
+---
+
+## Luồng 14: Quên mật khẩu (Forgot Password)
+
+> Roles: **Public** (không cần auth)
+
+### 14.1: Yêu cầu đặt lại mật khẩu
+
+```
+POST /identity/auth/forgot-password
+```
+```json
+{
+  "email": "lanhuong8899z@gmail.com"
+}
+```
+→ Response: `{ "message": "Nếu email tồn tại, mã xác nhận đã được gửi" }`
+
+> ⚠️ Luôn trả 200 OK dù email có tồn tại hay không (chống email enumeration)
+
+📧 **Email gửi đi**: Template branded "Đặt lại mật khẩu" với mã 6 số, có hiệu lực 15 phút.
+
+### 14.2: Đặt lại mật khẩu bằng mã
+
+```
+POST /identity/auth/reset-password
+```
+```json
+{
+  "email": "lanhuong8899z@gmail.com",
+  "code": "503353",
+  "newPassword": "NewPassword@123"
+}
+```
+→ Response: `{ "message": "Mật khẩu đã được đặt lại thành công" }`
+
+| Tình huống | Response |
+|-----------|----------|
+| Mã đúng, chưa hết hạn | ✅ 200 - Đặt lại thành công |
+| Mã sai | ❌ 400 - "Mã xác nhận không hợp lệ" |
+| Mã hết hạn (>15 phút) | ❌ 400 - "Mã xác nhận đã hết hạn" |
+| Email không tồn tại | ❌ 400 (nhưng forgot-password trả 200 để bảo mật) |
+
+---
+
+## Luồng 15: Email Notifications (Cảnh báo qua email)
+
+### 15.1: Cảnh báo tồn kho thấp
+
+> Roles: **StoreOwner, Manager**
+
+```
+POST /sales/notifications/low-stock-check?threshold=5
+```
+→ Hệ thống kiểm tra sản phẩm có `stock_quantity <= threshold`, gửi email cảnh báo cho chủ store.
+
+📧 **Email gửi đi**: Template "Cảnh báo tồn kho" với danh sách sản phẩm sắp hết, hết hàng.
+
+### 15.2: Cảnh báo subscription sắp hết hạn
+
+> Roles: **SuperAdmin**
+
+```
+POST /saas/subscriptions/check-expiry?days=7
+```
+→ Kiểm tra tất cả subscription hết hạn trong N ngày tới, gửi email cho store owners.
+
+### 15.3: Xem trạng thái subscription của tôi
+
+> Roles: **StoreOwner**
+
+```
+GET /saas/subscriptions/my-expiry
+```
+→ Response: Thông tin subscription hiện tại, ngày hết hạn, số ngày còn lại.
 
 ---
 

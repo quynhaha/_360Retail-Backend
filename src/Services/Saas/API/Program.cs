@@ -10,6 +10,7 @@ using _360Retail.Services.Saas.Infrastructure.Services;
 using _360Retail.Services.Saas.API.Services;
 using Microsoft.OpenApi.Models;
 using _360Retail.Services.Saas.Infrastructure.HttpClients;
+using _360Retail.Shared.Email;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,6 +73,9 @@ builder.Services.AddScoped<IStoreService, StoreService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddSingleton<VNPayService>();
 builder.Services.AddScoped<IPlanReviewService, PlanReviewService>();
+
+// Shared Email Services (for subscription expiry notifications)
+builder.Services.AddSharedEmailServices();
 
 // HTTP Client -> Identity Service
 var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] 

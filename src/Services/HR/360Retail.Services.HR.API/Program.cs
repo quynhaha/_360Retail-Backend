@@ -1,5 +1,6 @@
 using _360Retail.Services.HR.Application.Interfaces;
 using _360Retail.Shared.Common.Middleware;
+using _360Retail.Shared.Email;
 using _360Retail.Services.HR.Infrastructure.Persistence;
 using _360Retail.Services.HR.Infrastructure.Services;
 using _360Retail.Services.HR.Infrastructure.Services.Email;
@@ -35,7 +36,8 @@ builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<ITimekeepingService, TimekeepingService>();
-builder.Services.AddHttpClient<IEmailService, ResendEmailService>();
+builder.Services.AddSharedEmailServices();
+builder.Services.AddScoped<IEmailService, ResendEmailService>();
 #endregion
 
 #region ===== JWT AUTHENTICATION =====

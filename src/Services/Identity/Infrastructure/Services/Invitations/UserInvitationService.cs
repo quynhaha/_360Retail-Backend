@@ -2,8 +2,8 @@
 using _360Retail.Services.Identity.Application.Interfaces;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
-using _360Retail.Services.Identity.Infrastructure.Services.Email;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Data;
@@ -75,8 +75,17 @@ public class UserInvitationService : IUserInvitationService
         // Call HR Service to create Employee record
         await CreateEmployeeInHrService(user.Id, dto.StoreId, dto.Email, dto.Role);
 
-        await _emailService.SendTemporaryPasswordEmailAsync(
+        // Get store name for branded email (cross-schema query)
+        var storeName = await _db.Database
+            .SqlQueryRaw<string>(@"SELECT store_name AS ""Value"" FROM saas.stores WHERE id = {0}", dto.StoreId)
+            .FirstOrDefaultAsync() ?? "360Retail Store";
+        var employeeName = user.UserName ?? user.Email;
+
+        await _emailService.SendStaffInviteEmailAsync(
             user.Email,
+            employeeName,
+            storeName,
+            dto.Role,
             tempPassword
         );
     }
