@@ -10,6 +10,8 @@ using _360Retail.Services.CRM.Application.Services;
 using _360Retail.Services.CRM.Application.Interfaces;
 using _360Retail.Services.CRM.Application.Mappings;
 using _360Retail.Services.CRM.API.Middleware;
+using _360Retail.Services.CRM.API.Services;
+using _360Retail.Shared.Common.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -84,6 +86,7 @@ builder.Services.AddScoped<IIdempotencyRepository, IdempotencyRepository>();
 // Services
 builder.Services.AddScoped<ILoyaltyService, LoyaltyService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
+builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(cfg => {
@@ -99,7 +102,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Protect internal APIs with shared key
+app.UseInternalApiKeyProtection();
+
 app.UseMiddleware<IdempotencyMiddleware>(); // Add Idempotency Middleware
+
+app.UseGlobalExceptionHandler();
 
 app.UseHttpsRedirection();
 

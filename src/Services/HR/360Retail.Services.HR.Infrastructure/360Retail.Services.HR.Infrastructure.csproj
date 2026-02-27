@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\_360Retail.Shared.csproj" />
     <ProjectReference Include="..\360Retail.Services.HR.Application\360Retail.Services.HR.Application.csproj" />
     <ProjectReference Include="..\360Retail.Services.HR.Domain\360Retail.Services.HR.Domain.csproj" />
   </ItemGroup>

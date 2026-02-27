@@ -2,5 +2,16 @@
 
 public interface IEmailService
 {
-    Task SendTemporaryPasswordEmailAsync(string toEmail, string tempPassword);
+    Task SendStaffInviteEmailAsync(
+        string toEmail,
+        string employeeName,
+        string storeName,
+        string role,
+        string tempPassword);
+
+    Task SendForgotPasswordEmailAsync(
+        string toEmail,
+        string userName,
+        string resetCode,
+        int expiryMinutes = 15);
 }

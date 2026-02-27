@@ -336,31 +336,7 @@ SELECT
 WHERE NOT EXISTS (
     SELECT 1 FROM identity.app_users WHERE email = 'admin');
 
--- Script thêm admin 
-INSERT INTO identity.app_users (
-    id,
-    user_name,
-    email,
-    password_hash,
-    phone_number,
-    store_id,
-    status,
-    is_activated,
-    created_at
-)
-SELECT
-    uuid_generate_v4(),
-    'admin',
-    'admin',
-    'pmWkWSBCL51Bfkhn79xPuKBKHz//H6B+mY6G9/eieuM=',
-    NULL,
-    NULL,
-    'Active',
-    TRUE,
-    NOW()
-WHERE NOT EXISTS (
-    SELECT 1 FROM identity.app_users WHERE email = 'admin'
-);
+
 
 INSERT INTO identity.user_roles (user_id, role_id)
 SELECT u.id, r.id
@@ -585,8 +561,66 @@ CREATE TABLE IF NOT EXISTS crm.loyalty_transactions (
 CREATE UNIQUE INDEX IF NOT EXISTS "IX_loyalty_transactions_OrderId" ON crm.loyalty_transactions ("OrderId");
 CREATE INDEX IF NOT EXISTS "IX_loyalty_transactions_CustomerId" ON crm.loyalty_transactions ("CustomerId");
 
--- 25/2/2026: Add missing columns to crm.customers (required by Customer entity)
 ALTER TABLE crm.customers
 ADD COLUMN IF NOT EXISTS last_purchase_date TIMESTAMP,
 ADD COLUMN IF NOT EXISTS rank VARCHAR(50),
 ADD COLUMN IF NOT EXISTS zalo_id VARCHAR(100);
+
+-- 26/2/2026: Inventory Management - Update inventory_tickets table
+ALTER TABLE sales.inventory_tickets
+ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'Draft',
+ADD COLUMN IF NOT EXISTS total_quantity INT DEFAULT 0,
+ADD COLUMN IF NOT EXISTS confirmed_by_employee_id UUID REFERENCES hr.employees(id),
+ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMP,
+ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
+
+-- Set status for existing tickets if any
+UPDATE sales.inventory_tickets
+SET status = 'Draft'
+WHERE status IS NULL;
+
+-- 26/2/2026: Inventory Management - Create inventory_ticket_items table
+CREATE TABLE IF NOT EXISTS sales.inventory_ticket_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    ticket_id UUID NOT NULL REFERENCES sales.inventory_tickets(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES sales.products(id),
+    product_variant_id UUID REFERENCES sales.product_variants(id),
+    quantity INT NOT NULL,
+    note VARCHAR(500)
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_ticket_items_ticket
+ON sales.inventory_ticket_items(ticket_id);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_tickets_store
+ON sales.inventory_tickets(store_id);
+
+-- 27/02/2026: Add GPS coordinates to stores for timekeeping geofencing
+ALTER TABLE saas.stores
+ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+
+-- 27/02/2026: Add order_id to customer_feedbacks for QR-based public feedback
+ALTER TABLE crm.customer_feedbacks
+ADD COLUMN IF NOT EXISTS order_id UUID;
+
+-- Unique: 1 feedback per order
+CREATE UNIQUE INDEX IF NOT EXISTS idx_customer_feedbacks_order_id
+ON crm.customer_feedbacks(order_id) WHERE order_id IS NOT NULL;
+
+-- 27/02/2026: Plan reviews - Store owners review subscription plans
+CREATE TABLE IF NOT EXISTS saas.plan_reviews (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plan_id UUID NOT NULL REFERENCES saas.service_plans(id),
+    user_id UUID NOT NULL,
+    store_id UUID NOT NULL REFERENCES saas.stores(id),
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, plan_id)  -- 1 review per user per plan
+);
+
+-- 28/02/2026: Forgot Password - Password reset code and expiry
+ALTER TABLE identity.app_users
+ADD COLUMN IF NOT EXISTS password_reset_code VARCHAR(10),
+ADD COLUMN IF NOT EXISTS password_reset_expiry TIMESTAMPTZ;

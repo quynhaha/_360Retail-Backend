@@ -111,5 +111,27 @@ namespace _360Retail.Services.Identity.API.Controllers
             return Ok(result);
         }
 
+        // FORGOT PASSWORD (PUBLIC)
+        /// <summary>
+        /// Gửi mã reset password về email
+        /// </summary>
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+        {
+            await _authService.ForgotPasswordAsync(dto.Email);
+            return Ok(new { message = "Nếu email tồn tại, mã xác nhận đã được gửi" });
+        }
+
+        // RESET PASSWORD (PUBLIC)
+        /// <summary>
+        /// Đặt lại mật khẩu bằng mã xác nhận
+        /// </summary>
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+        {
+            await _authService.ResetPasswordAsync(dto.Email, dto.ResetCode, dto.NewPassword);
+            return Ok(new { message = "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại" });
+        }
+
     }
 }

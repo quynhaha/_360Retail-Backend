@@ -21,5 +21,9 @@ public interface IAuthService
 
     // External OAuth methods
     Task<ExternalAuthResultDto> ExternalLoginAsync(ExternalLoginDto dto);
+
+    // Forgot Password
+    Task ForgotPasswordAsync(string email);
+    Task ResetPasswordAsync(string email, string resetCode, string newPassword);
 }
 

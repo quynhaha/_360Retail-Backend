@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using _360Retail.Services.Sales.Application.Interfaces;
 using _360Retail.Services.Sales.Infrastructure.Services;
 using _360Retail.Services.Sales.Infrastructure.HttpClients;
+using _360Retail.Shared.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -11,13 +12,10 @@ using Microsoft.OpenApi.Models;
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 var connString = builder.Configuration.GetConnectionString("DefaultConnection");
-Console.BackgroundColor = ConsoleColor.Blue;
-Console.ForegroundColor = ConsoleColor.White;
-Console.WriteLine($"\n==================================================");
-Console.WriteLine($"[DEBUG] CODE ĐANG KẾT NỐI ĐẾN DATABASE NÀY:");
-Console.WriteLine($"👉 {connString}"); 
-Console.WriteLine($"==================================================\n");
-Console.ResetColor();
+builder.Logging.AddConsole();
+var startupLogger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger("Startup");
+startupLogger.LogInformation("Sales API connecting to database: {ConnectionString}", connString);
+
 
 builder.Services.AddDbContext<SalesDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -76,6 +74,11 @@ builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+// Shared Email Services (for low stock notifications)
+builder.Services.AddSharedEmailServices();
 
 // CRM HttpClient for loyalty points
 builder.Services.AddHttpClient<ICrmClient, CrmClient>(client =>

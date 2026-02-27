@@ -1,33 +1,41 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 
 namespace _360Retail.Services.Sales.Application.Common
 {
     public class JsonModelBinder : IModelBinder
     {
+        private readonly ILogger<JsonModelBinder> _logger;
+
+        public JsonModelBinder(ILoggerFactory loggerFactory)
+        {
+            _logger = loggerFactory.CreateLogger<JsonModelBinder>();
+        }
+
         public Task BindModelAsync(ModelBindingContext bindingContext)
         {
             if (bindingContext == null) throw new ArgumentNullException(nameof(bindingContext));
 
             var modelName = bindingContext.ModelName;
-            Console.WriteLine($"[DEBUG] JsonModelBinder - Looking for field: '{modelName}'");
+            _logger.LogDebug("JsonModelBinder - Looking for field: '{ModelName}'", modelName);
 
             var valueProviderResult = bindingContext.ValueProvider.GetValue(modelName);
             
             if (valueProviderResult == ValueProviderResult.None)
             {
-                Console.WriteLine($"[DEBUG] JsonModelBinder - Field '{modelName}' NOT FOUND in request!");
+                _logger.LogDebug("JsonModelBinder - Field '{ModelName}' NOT FOUND in request", modelName);
                 return Task.CompletedTask;
             }
 
             bindingContext.ModelState.SetModelValue(modelName, valueProviderResult);
 
             var value = valueProviderResult.FirstValue;
-            Console.WriteLine($"[DEBUG] JsonModelBinder - Field '{modelName}' value: {value?.Substring(0, Math.Min(value?.Length ?? 0, 200))}");
+            _logger.LogDebug("JsonModelBinder - Field '{ModelName}' received", modelName);
 
             if (string.IsNullOrEmpty(value))
             {
-                Console.WriteLine($"[DEBUG] JsonModelBinder - Field '{modelName}' is empty!");
+                _logger.LogDebug("JsonModelBinder - Field '{ModelName}' is empty", modelName);
                 return Task.CompletedTask;
             }
 
@@ -35,12 +43,12 @@ namespace _360Retail.Services.Sales.Application.Common
             {
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var result = JsonSerializer.Deserialize(value, bindingContext.ModelType, options);
-                Console.WriteLine($"[DEBUG] JsonModelBinder - Successfully deserialized '{modelName}'");
+                _logger.LogDebug("JsonModelBinder - Successfully deserialized '{ModelName}'", modelName);
                 bindingContext.Result = ModelBindingResult.Success(result);
             }
             catch (JsonException ex)
             {
-                Console.WriteLine($"[DEBUG] JsonModelBinder - JSON parse error for '{modelName}': {ex.Message}");
+                _logger.LogWarning(ex, "JsonModelBinder - JSON parse error for '{ModelName}'", modelName);
                 bindingContext.ModelState.TryAddModelError(modelName, "Invalid JSON format.");
             }
 
@@ -48,4 +56,3 @@ namespace _360Retail.Services.Sales.Application.Common
         }
     }
 }
-

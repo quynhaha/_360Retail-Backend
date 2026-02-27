@@ -2,8 +2,9 @@
 using _360Retail.Services.Identity.Application.Interfaces;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
-using _360Retail.Services.Identity.Infrastructure.Services.Email;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Data;
 using System.Linq;
@@ -19,17 +20,20 @@ public class UserInvitationService : IUserInvitationService
     private readonly IEmailService _emailService;
     private readonly IPasswordHasher<AppUser> _passwordHasher;
     private readonly HttpClient _hrClient;
+    private readonly ILogger<UserInvitationService> _logger;
 
     public UserInvitationService(
         IdentityDbContext db,
         IEmailService emailService,
         IPasswordHasher<AppUser> passwordHasher,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        ILogger<UserInvitationService> logger)
     {
         _db = db;
         _emailService = emailService;
         _passwordHasher = passwordHasher;
         _hrClient = httpClientFactory.CreateClient("HrService");
+        _logger = logger;
     }
 
     public async Task InviteUserAsync(InviteUserDto dto)
@@ -71,8 +75,17 @@ public class UserInvitationService : IUserInvitationService
         // Call HR Service to create Employee record
         await CreateEmployeeInHrService(user.Id, dto.StoreId, dto.Email, dto.Role);
 
-        await _emailService.SendTemporaryPasswordEmailAsync(
+        // Get store name for branded email (cross-schema query)
+        var storeName = await _db.Database
+            .SqlQueryRaw<string>(@"SELECT store_name AS ""Value"" FROM saas.stores WHERE id = {0}", dto.StoreId)
+            .FirstOrDefaultAsync() ?? "360Retail Store";
+        var employeeName = user.UserName ?? user.Email;
+
+        await _emailService.SendStaffInviteEmailAsync(
             user.Email,
+            employeeName,
+            storeName,
+            dto.Role,
             tempPassword
         );
     }
@@ -95,17 +108,16 @@ public class UserInvitationService : IUserInvitationService
             if (!response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
-                // CRITICAL: Log this better so user can see it in docker logs
-                Console.WriteLine($"[HR_SYNC_ERROR] Status: {response.StatusCode}, Error: {content}");
+                _logger.LogError("HR Sync Error - Status: {StatusCode}, Error: {Error}", response.StatusCode, content);
             }
             else 
             {
-                Console.WriteLine($"[HR_SYNC_SUCCESS] Employee created for AppUserId: {appUserId}");
+                _logger.LogInformation("HR Sync Success - Employee created for AppUserId: {AppUserId}", appUserId);
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[HR_SYNC_EXCEPTION] HR service unavailable: {ex.Message}");
+            _logger.LogWarning(ex, "HR service unavailable during employee sync for AppUserId: {AppUserId}", appUserId);
         }
     }
 

@@ -3,6 +3,7 @@ using _360Retail.Services.HR.Application.Interfaces;
 using _360Retail.Services.HR.Domain.Entities;
 using _360Retail.Services.HR.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
 namespace _360Retail.Services.HR.Infrastructure.Services;
@@ -11,11 +12,13 @@ public class EmployeeService : IEmployeeService
 {
     private readonly HrDbContext _db;
     private readonly HttpClient _identityClient;
+    private readonly ILogger<EmployeeService> _logger;
 
-    public EmployeeService(HrDbContext db, IHttpClientFactory httpClientFactory)
+    public EmployeeService(HrDbContext db, IHttpClientFactory httpClientFactory, ILogger<EmployeeService> logger)
     {
         _db = db;
         _identityClient = httpClientFactory.CreateClient("IdentityService");
+        _logger = logger;
     }
 
     /// <summary>
@@ -242,8 +245,7 @@ public class EmployeeService : IEmployeeService
     /// </summary>
     public async Task<bool> UpdateByOwnerAsync(Guid employeeId, Guid storeId, UpdateEmployeeByOwnerDto dto)
     {
-        Console.WriteLine($"[HR DEBUG] UpdateByOwnerAsync: employeeId={employeeId}, storeId={storeId}");
-        Console.WriteLine($"[HR DEBUG] DTO: FullName={dto.FullName ?? "null"}, Position={dto.Position ?? "null"}, BaseSalary={dto.BaseSalary}, IsActive={dto.IsActive}");
+        _logger.LogDebug("UpdateByOwnerAsync: employeeId={EmployeeId}, storeId={StoreId}", employeeId, storeId);
         
         var employee = await _db.Employees
             .FirstOrDefaultAsync(e => e.Id == employeeId && e.StoreId == storeId);
@@ -251,11 +253,9 @@ public class EmployeeService : IEmployeeService
         if (employee == null)
             return false;
 
-        Console.WriteLine($"[HR DEBUG] Current employee position: {employee.Position}");
-        
         // Track if position changed for syncing to Identity
         var positionChanged = !string.IsNullOrWhiteSpace(dto.Position) && dto.Position != employee.Position;
-        Console.WriteLine($"[HR DEBUG] positionChanged={positionChanged}");
+        _logger.LogDebug("positionChanged={PositionChanged}, current={CurrentPosition}", positionChanged, employee.Position);
 
         // Update fields if provided (partial update)
         if (!string.IsNullOrWhiteSpace(dto.FullName))

@@ -57,9 +57,8 @@ namespace _360Retail.Services.Sales.Application.DTOs
                 return JsonSerializer.Deserialize<List<CreateProductVariantDto>>(json, options) 
                     ?? new List<CreateProductVariantDto>();
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"[DEBUG] GetVariants parse error: {ex.Message}");
                 return new List<CreateProductVariantDto>();
             }
         }
