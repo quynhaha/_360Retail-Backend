@@ -53,7 +53,7 @@ public class AuthService : IAuthService
             );
 
         if (user == null)
-            throw new Exception("Invalid email or password");
+            throw new UnauthorizedAccessException("Invalid email or password");
 
         var verifyResult = _passwordHasher.VerifyHashedPassword(
             user,
@@ -62,7 +62,7 @@ public class AuthService : IAuthService
         );
 
         if (verifyResult == PasswordVerificationResult.Failed)
-            throw new Exception("Invalid email or password");
+            throw new UnauthorizedAccessException("Invalid email or password");
 
         var token = await GenerateJwtTokenAsync(user);
         var expireMinutes = GetJwtExpireMinutes();

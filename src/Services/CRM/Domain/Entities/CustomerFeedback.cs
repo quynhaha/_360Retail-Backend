@@ -11,6 +11,8 @@ public partial class CustomerFeedback
 
     public Guid CustomerId { get; set; }
 
+    public Guid? OrderId { get; set; }
+
     public string? Content { get; set; }
 
     public int? Rating { get; set; }
