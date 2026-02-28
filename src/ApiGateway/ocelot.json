@@ -3,7 +3,13 @@
     {
       "SwaggerKey": "identity",
       "UpstreamPathTemplate": "/identity/{everything}",
-      "UpstreamHttpMethod": ["Get", "Post", "Put", "Delete", "Patch"],
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete",
+        "Patch"
+      ],
       "DownstreamPathTemplate": "/api/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -11,12 +17,24 @@
           "Host": "identity-api",
           "Port": 8080
         }
-      ]
+      ],
+      "RateLimitOptions": {
+        "EnableRateLimiting": true,
+        "Period": "1s",
+        "PeriodTimespan": 1,
+        "Limit": 30
+      }
     },
     {
       "SwaggerKey": "saas",
       "UpstreamPathTemplate": "/saas/{everything}",
-      "UpstreamHttpMethod": ["Get", "Post", "Put", "Delete", "Patch"],
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete",
+        "Patch"
+      ],
       "DownstreamPathTemplate": "/api/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -24,12 +42,24 @@
           "Host": "saas-api",
           "Port": 8080
         }
-      ]
+      ],
+      "RateLimitOptions": {
+        "EnableRateLimiting": true,
+        "Period": "1s",
+        "PeriodTimespan": 1,
+        "Limit": 100
+      }
     },
     {
       "SwaggerKey": "sales",
       "UpstreamPathTemplate": "/sales/{everything}",
-      "UpstreamHttpMethod": ["Get", "Post", "Put", "Delete", "Patch"],
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete",
+        "Patch"
+      ],
       "DownstreamPathTemplate": "/api/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -37,12 +67,24 @@
           "Host": "sales-api",
           "Port": 8080
         }
-      ]
+      ],
+      "RateLimitOptions": {
+        "EnableRateLimiting": true,
+        "Period": "1s",
+        "PeriodTimespan": 1,
+        "Limit": 100
+      }
     },
     {
       "SwaggerKey": "hr",
       "UpstreamPathTemplate": "/hr/{everything}",
-      "UpstreamHttpMethod": ["Get", "Post", "Put", "Delete", "Patch"],
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete",
+        "Patch"
+      ],
       "DownstreamPathTemplate": "/api/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -50,12 +92,24 @@
           "Host": "hr-api",
           "Port": 8080
         }
-      ]
+      ],
+      "RateLimitOptions": {
+        "EnableRateLimiting": true,
+        "Period": "1s",
+        "PeriodTimespan": 1,
+        "Limit": 100
+      }
     },
     {
       "SwaggerKey": "crm",
       "UpstreamPathTemplate": "/crm/{everything}",
-      "UpstreamHttpMethod": ["Get", "Post", "Put", "Delete", "Patch"],
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post",
+        "Put",
+        "Delete",
+        "Patch"
+      ],
       "DownstreamPathTemplate": "/api/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -63,7 +117,13 @@
           "Host": "crm-api",
           "Port": 8080
         }
-      ]
+      ],
+      "RateLimitOptions": {
+        "EnableRateLimiting": true,
+        "Period": "1s",
+        "PeriodTimespan": 1,
+        "Limit": 100
+      }
     }
   ],
   "SwaggerEndPoints": [
@@ -124,6 +184,12 @@
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "http://localhost:5001"
+    "BaseUrl": "http://localhost:5001",
+    "RateLimitOptions": {
+      "DisableRateLimitHeaders": false,
+      "QuotaExceededMessage": "Too many requests. Please try again later.",
+      "HttpStatusCode": 429,
+      "ClientIdHeader": "X-ClientId"
+    }
   }
 }
