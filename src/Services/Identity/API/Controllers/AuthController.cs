@@ -35,7 +35,29 @@ namespace _360Retail.Services.Identity.API.Controllers
         public async Task<IActionResult> Register(RegisterUserDto dto)
         {
             await _authService.RegisterAsync(dto);
-            return Ok(new { message = "Register successful" });
+            return Ok(new { message = "Đăng ký thành công. Vui lòng kiểm tra email để nhập mã OTP xác nhận." });
+        }
+
+        // VERIFY EMAIL (PUBLIC)
+        /// <summary>
+        /// Xác nhận email bằng mã OTP 6 chữ số
+        /// </summary>
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
+        {
+            await _authService.VerifyEmailAsync(dto.Email, dto.OtpCode);
+            return Ok(new { message = "Xác nhận email thành công. Bạn có thể đăng nhập ngay." });
+        }
+
+        // RESEND OTP (PUBLIC)
+        /// <summary>
+        /// Gửi lại mã OTP xác nhận email
+        /// </summary>
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpDto dto)
+        {
+            await _authService.ResendOtpAsync(dto.Email);
+            return Ok(new { message = "Nếu email hợp lệ, mã OTP mới đã được gửi." });
         }
 
         // ASSIGN STORE (INTERNAL/DEV)

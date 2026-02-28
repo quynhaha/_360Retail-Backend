@@ -142,11 +142,11 @@ var app = builder.Build();
 //  KHU VỰC CẤU HÌNH PIPELINE (Middleware)
 // ==========================================
 
-// Global Exception Handler - must be first
-app.UseGlobalExceptionHandler();
-
-// Serilog request logging
+// Serilog request logging - must be first to see final status codes
 app.UseSerilogRequestLogging();
+
+// Global Exception Handler - converts exceptions to proper HTTP responses
+app.UseGlobalExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

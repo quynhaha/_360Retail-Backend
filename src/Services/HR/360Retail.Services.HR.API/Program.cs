@@ -129,11 +129,11 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 #region ===== MIDDLEWARE =====
-// Global Exception Handler - must be first
-app.UseGlobalExceptionHandler();
-
-// Serilog request logging
+// Serilog request logging - must be first to see final status codes
 app.UseSerilogRequestLogging();
+
+// Global Exception Handler - converts exceptions to proper HTTP responses
+app.UseGlobalExceptionHandler();
 
 // Protect internal APIs with shared key
 app.UseInternalApiKeyProtection();

@@ -366,6 +366,40 @@ public static class EmailTemplateService
 
         return WrapInLayout("Đặt lại mật khẩu - 360Retail", body, "Mã xác nhận đặt lại mật khẩu 360Retail");
     }
+
+    // ─────────────────────────────────────────────────────────
+    // TEMPLATE 6: EMAIL VERIFICATION OTP
+    // ─────────────────────────────────────────────────────────
+    
+    public static string EmailVerification(string userName, string otpCode, int expiryMinutes = 10)
+    {
+        var body = $@"
+            <div style=""text-align: center;"">
+                {IconBadge("✉️", "#f0fdf4")}
+                <h1 style=""margin: 0 0 8px; font-size: 22px; color: #1e293b; font-weight: 700;"">Xác nhận email</h1>
+                <p style=""margin: 0 0 28px; color: #64748b; font-size: 15px;"">Xin chào <strong>{userName}</strong></p>
+            </div>
+
+            <p style=""color: #374151; font-size: 15px; line-height: 1.6; margin: 0 0 24px;"">
+                Cảm ơn bạn đã đăng ký tài khoản 360Retail! Vui lòng sử dụng mã OTP bên dưới để xác nhận email:
+            </p>
+
+            <!-- OTP Code Box -->
+            <div style=""margin: 0 0 24px; padding: 24px; background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-radius: 12px; border: 1px solid #86efac; text-align: center;"">
+                <p style=""margin: 0 0 8px; color: #166534; font-size: 13px; font-weight: 600;"">Mã xác nhận</p>
+                <p style=""margin: 0; font-size: 36px; font-weight: 800; color: #1e293b; letter-spacing: 8px; font-family: 'Courier New', monospace;"">{otpCode}</p>
+                <p style=""margin: 12px 0 0; color: #64748b; font-size: 12px;"">⏱️ Mã có hiệu lực trong {expiryMinutes} phút</p>
+            </div>
+
+            <!-- Security Notice -->
+            <div style=""margin: 28px 0 0; padding: 16px 20px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;"">
+                <p style=""margin: 0; color: #64748b; font-size: 13px; line-height: 1.6;"">
+                    🛡️ Nếu bạn không tạo tài khoản này, vui lòng bỏ qua email này.
+                </p>
+            </div>";
+
+        return WrapInLayout("Xác nhận email - 360Retail", body, "Mã xác nhận đăng ký tài khoản 360Retail");
+    }
 }
 
 /// <summary>

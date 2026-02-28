@@ -14,4 +14,10 @@ public interface IEmailService
         string userName,
         string resetCode,
         int expiryMinutes = 15);
+
+    Task SendVerificationEmailAsync(
+        string toEmail,
+        string userName,
+        string otpCode,
+        int expiryMinutes = 10);
 }

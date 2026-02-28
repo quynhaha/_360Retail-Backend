@@ -624,3 +624,8 @@ CREATE TABLE IF NOT EXISTS saas.plan_reviews (
 ALTER TABLE identity.app_users
 ADD COLUMN IF NOT EXISTS password_reset_code VARCHAR(10),
 ADD COLUMN IF NOT EXISTS password_reset_expiry TIMESTAMPTZ;
+
+-- 28/02/2026: Email Verification OTP - OTP code and expiry for registration
+ALTER TABLE identity.app_users
+ADD COLUMN IF NOT EXISTS email_verification_code VARCHAR(6),
+ADD COLUMN IF NOT EXISTS email_verification_expiry TIMESTAMPTZ;

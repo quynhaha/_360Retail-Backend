@@ -115,10 +115,11 @@ app.UseInternalApiKeyProtection();
 
 app.UseMiddleware<IdempotencyMiddleware>(); // Add Idempotency Middleware
 
-app.UseGlobalExceptionHandler();
-
-// Serilog request logging
+// Serilog request logging - must be first to see final status codes
 app.UseSerilogRequestLogging();
+
+// Global Exception Handler - converts exceptions to proper HTTP responses
+app.UseGlobalExceptionHandler();
 
 app.UseHttpsRedirection();
 

@@ -43,6 +43,13 @@ public class AuthService : IAuthService
         // Allow login for Registered, Trial, and Active users
         var validStatuses = new[] { "Registered", "Trial", "Active" };
         
+        // First check if user exists but not activated (email not verified)
+        var unverifiedUser = await _db.AppUsers
+            .FirstOrDefaultAsync(u => u.Email == dto.Email && !u.IsActivated);
+        
+        if (unverifiedUser != null)
+            throw new UnauthorizedAccessException("Vui lòng xác nhận email trước khi đăng nhập. Kiểm tra hộp thư của bạn.");
+
         var user = await _db.AppUsers
             .Include(u => u.StoreAccesses)
             .Include(u => u.Roles)
@@ -76,19 +83,34 @@ public class AuthService : IAuthService
 
 
     // REGISTER (Creates PotentialOwner - no trial yet, no store)
+    // Now requires email verification via OTP before activation
     public async Task RegisterAsync(RegisterUserDto dto)
     {
-        if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email))
+        if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email && u.IsActivated))
             throw new Exception("Email already exists");
+
+        // Remove any unverified registration with same email (allow re-register)
+        var existingUnverified = await _db.AppUsers
+            .FirstOrDefaultAsync(u => u.Email == dto.Email && !u.IsActivated);
+        if (existingUnverified != null)
+        {
+            _db.AppUsers.Remove(existingUnverified);
+            await _db.SaveChangesAsync();
+        }
+
+        // Generate 6-digit OTP
+        var otpCode = Random.Shared.Next(100000, 999999).ToString();
 
         var user = new AppUser
         {
             Email = dto.Email,
             UserName = dto.FullName ?? dto.Email,
             PhoneNumber = dto.PhoneNumber,
-            Status = "Registered",  // Not trial yet, waiting for StartTrial
-            IsActivated = true,
-            MustChangePassword = false
+            Status = "Registered",
+            IsActivated = false,  // Must verify email first
+            MustChangePassword = false,
+            EmailVerificationCode = otpCode,
+            EmailVerificationExpiry = DateTime.UtcNow.AddMinutes(10)
         };
 
         user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
@@ -99,7 +121,6 @@ public class AuthService : IAuthService
         
         if (potentialOwnerRole == null)
         {
-            // Create role if not exists (should be created by migration)
             potentialOwnerRole = new AppRole { RoleName = "PotentialOwner" };
             _db.AppRoles.Add(potentialOwnerRole);
         }
@@ -108,6 +129,14 @@ public class AuthService : IAuthService
 
         _db.AppUsers.Add(user);
         await _db.SaveChangesAsync();
+
+        // Send verification email via Resend
+        await _emailService.SendVerificationEmailAsync(
+            user.Email,
+            user.UserName ?? user.Email,
+            otpCode,
+            10
+        );
     }
 
 
@@ -718,6 +747,57 @@ public class AuthService : IAuthService
         user.MustChangePassword = false;
         
         await _db.SaveChangesAsync();
+    }
+
+    // ==================== EMAIL VERIFICATION (OTP) ====================
+
+    public async Task VerifyEmailAsync(string email, string otpCode)
+    {
+        var user = await _db.AppUsers
+            .FirstOrDefaultAsync(u => u.Email == email && !u.IsActivated);
+
+        if (user == null)
+            throw new Exception("Email không tồn tại hoặc đã được xác nhận");
+
+        if (string.IsNullOrEmpty(user.EmailVerificationCode) || user.EmailVerificationCode != otpCode)
+            throw new Exception("Mã OTP không chính xác");
+
+        if (user.EmailVerificationExpiry == null || user.EmailVerificationExpiry < DateTime.UtcNow)
+            throw new Exception("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại");
+
+        // Activate the account
+        user.IsActivated = true;
+        user.EmailVerificationCode = null;
+        user.EmailVerificationExpiry = null;
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task ResendOtpAsync(string email)
+    {
+        var user = await _db.AppUsers
+            .FirstOrDefaultAsync(u => u.Email == email && !u.IsActivated);
+
+        if (user == null)
+        {
+            // Don't reveal if email exists (security)
+            return;
+        }
+
+        // Generate new 6-digit OTP
+        var otpCode = Random.Shared.Next(100000, 999999).ToString();
+        user.EmailVerificationCode = otpCode;
+        user.EmailVerificationExpiry = DateTime.UtcNow.AddMinutes(10);
+
+        await _db.SaveChangesAsync();
+
+        // Send verification email
+        await _emailService.SendVerificationEmailAsync(
+            user.Email,
+            user.UserName ?? user.Email,
+            otpCode,
+            10
+        );
     }
 }
 

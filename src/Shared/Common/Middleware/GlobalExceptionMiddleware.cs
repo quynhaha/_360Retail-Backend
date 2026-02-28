@@ -57,7 +57,17 @@ public class GlobalExceptionMiddleware
             _ => HandleGenericException(exception)
         };
 
-        _logger.LogError(exception, "Request error: {Message}", exception.Message);
+        // Log at appropriate level based on status code
+        // Business logic errors (4xx) are expected — log as Warning
+        // Server errors (5xx) are unexpected — log as Error
+        if (statusCode >= 500)
+        {
+            _logger.LogError(exception, "Server error: {Message}", exception.Message);
+        }
+        else
+        {
+            _logger.LogWarning("Request rejected ({StatusCode}): {Message}", statusCode, exception.Message);
+        }
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
