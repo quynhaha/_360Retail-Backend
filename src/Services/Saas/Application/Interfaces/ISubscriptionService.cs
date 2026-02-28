@@ -14,6 +14,9 @@ public interface ISubscriptionService
     // For payment initiation
     Task<Payment?> GetPaymentByIdAsync(Guid paymentId);
     Task<PaymentPlanInfo?> GetPaymentPlanInfoAsync(Guid paymentId);
+    
+    // For SePay webhook — find pending payments to match payment code
+    Task<IEnumerable<Guid>> GetPendingPaymentIdsAsync();
 }
 
 public record PaymentPlanInfo(string PlanName, decimal Price, int DurationDays);

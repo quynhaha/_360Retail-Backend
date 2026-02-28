@@ -176,4 +176,12 @@ public class SubscriptionService : ISubscriptionService
             payment.Subscription.Plan.DurationDays
         );
     }
+
+    public async Task<IEnumerable<Guid>> GetPendingPaymentIdsAsync()
+    {
+        return await _db.Payments
+            .Where(p => p.Status == "Pending")
+            .Select(p => p.Id)
+            .ToListAsync();
+    }
 }

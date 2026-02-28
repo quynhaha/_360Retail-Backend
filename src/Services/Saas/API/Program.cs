@@ -72,6 +72,7 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
 builder.Services.AddScoped<IStoreService, StoreService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddSingleton<VNPayService>();
+builder.Services.AddSingleton<SePayService>();
 builder.Services.AddScoped<IPlanReviewService, PlanReviewService>();
 
 // Shared Email Services (for subscription expiry notifications)
