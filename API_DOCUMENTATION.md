@@ -15,7 +15,9 @@
 
 | # | Method | Endpoint | Auth | Mô tả |
 |:-:|:------:|----------|:----:|-------|
-| 1 | POST | `/identity/auth/register` | ❌ | Đăng ký tài khoản mới |
+| 1 | POST | `/identity/auth/register` | ❌ | Đăng ký → gửi OTP email |
+| 1b | POST | `/identity/auth/verify-email` | ❌ | Xác nhận email bằng OTP 6 số |
+| 1c | POST | `/identity/auth/resend-otp` | ❌ | Gửi lại mã OTP |
 | 2 | POST | `/identity/auth/login` | ❌ | Đăng nhập → lấy accessToken |
 | 3 | POST | `/identity/auth/external` | ❌ | Đăng nhập Google/Facebook |
 | 4 | GET | `/identity/auth/me` | ✅ | Thông tin user hiện tại |
@@ -163,16 +165,17 @@ Góc **trên bên phải** Postman → dropdown "No environment" → chọn **"3
 ### Bước 3: Test theo thứ tự
 
 ```
-📌 Register → Login ⭐ → Start Trial → Login ⭐ lại → Xong! Test gì cũng được
+📌 Register → Verify Email (OTP) → Login ⭐ → Start Trial → Login ⭐ lại → Xong!
 ```
 
 | Bước | Request | Folder | Ghi chú |
 |:----:|---------|--------|---------|
-| 1 | **Register** | 1. Identity - Auth | Đăng ký (email/pass đã điền sẵn) |
-| 2 | **Login ⭐** | 1. Identity - Auth | Token **tự lưu** vào biến `accessToken` |
-| 3 | **Start Trial** | 2. Identity - Subscription | Tạo store + storeId **tự lưu** |
-| 4 | **Login ⭐** (lần 2) | 1. Identity - Auth | Token mới có storeId + StoreOwner |
-| 5+ | Bất kỳ endpoint | Bất kỳ folder | Auth tự gắn, không cần paste token |
+| 1 | **Register** | 1. Identity - Auth | Đăng ký → nhận OTP qua email |
+| 2 | **Verify Email ⭐** | 1. Identity - Auth | Nhập mã OTP 6 số từ email |
+| 3 | **Login ⭐** | 1. Identity - Auth | Token **tự lưu** vào biến `accessToken` |
+| 4 | **Start Trial** | 2. Identity - Subscription | Tạo store + storeId **tự lưu** |
+| 5 | **Login ⭐** (lần 2) | 1. Identity - Auth | Token mới có storeId + StoreOwner |
+| 6+ | Bất kỳ endpoint | Bất kỳ folder | Auth tự gắn, không cần paste token |
 
 ### Tại sao không cần nhập gì?
 
@@ -224,7 +227,7 @@ Swagger gộp tất cả APIs từ các services. Prefix route:
 
 # 📋 LUỒNG NGHIỆP VỤ CHI TIẾT
 
-## Luồng 1: Đăng ký & Dùng thử (Trial)
+## Luồng 1: Đăng ký & Xác nhận Email & Dùng thử (Trial)
 
 ### Bước 1.1: Đăng ký tài khoản
 
@@ -234,14 +237,38 @@ POST /identity/auth/register
 ```json
 {
   "email": "owner@example.com",
-  "password": "Password123!"
+  "password": "Password123!",
+  "fullName": "Nguyễn Văn A",
+  "phoneNumber": "0901234567"
 }
 ```
-→ Response: `{ "message": "Register successful" }`
+→ Response: `{ "message": "Đăng ký thành công. Vui lòng kiểm tra email để nhập mã OTP xác nhận." }`
+
+⚠️ **Quan trọng**: Hệ thống gửi mã OTP 6 chữ số đến email. Phải xác nhận trước khi login!
 
 ---
 
-### Bước 1.2: Đăng nhập
+### Bước 1.2: Xác nhận email (OTP)
+
+```
+POST /identity/auth/verify-email
+```
+```json
+{
+  "email": "owner@example.com",
+  "otpCode": "123456"
+}
+```
+→ Response: `{ "message": "Xác nhận email thành công. Bạn có thể đăng nhập ngay." }`
+
+> OTP hết hạn sau **10 phút**. Gọi `POST /identity/auth/resend-otp` nếu cần gửi lại:
+```json
+{ "email": "owner@example.com" }
+```
+
+---
+
+### Bước 1.3: Đăng nhập
 
 ```
 POST /identity/auth/login
@@ -261,11 +288,13 @@ POST /identity/auth/login
 }
 ```
 
+> ❌ Nếu chưa verify email → sẽ nhận **401**: `"Vui lòng xác nhận email trước khi đăng nhập"`
+
 ⚠️ **Quan trọng**: Copy token này, click nút **Authorize** ở góc trên phải Swagger, dán vào ô `Value`: `Bearer eyJhbGciOiJIUzI1...`
 
 ---
 
-### Bước 1.3: Bắt đầu Trial (7 ngày miễn phí)
+### Bước 1.4: Bắt đầu Trial (7 ngày miễn phí)
 
 ```
 POST /identity/subscription/start-trial
@@ -284,7 +313,7 @@ POST /identity/subscription/start-trial
 
 ---
 
-### Bước 1.4: Kiểm tra claims trong JWT
+### Bước 1.5: Kiểm tra claims trong JWT
 
 ```
 GET /identity/auth/me
