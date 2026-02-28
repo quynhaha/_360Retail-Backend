@@ -16,10 +16,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Serilog;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ===== SERILOG =====
+builder.Host.UseSerilog((context, config) => config
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.WithProperty("Service", "Identity")
+    .WriteTo.Console());
 
 #region ===== HTTP & EMAIL =====
 builder.Services.AddHttpClient();
@@ -156,6 +163,9 @@ var app = builder.Build();
 #region ===== MIDDLEWARE =====
 // Global Exception Handler - must be first
 app.UseGlobalExceptionHandler();
+
+// Serilog request logging
+app.UseSerilogRequestLogging();
 
 // Protect internal APIs with shared key
 app.UseInternalApiKeyProtection();
