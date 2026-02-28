@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "360retail-api-collection",
         "name": "360Retail API",
-        "description": "# 360Retail - Full API Collection\n\n> **Base URL**: `{{baseUrl}}` (default: http://localhost:5001)\n>\n> **Cập nhật**: 27/02/2026\n\n## Hướng dẫn sử dụng\n\n1. Import file này vào Postman\n2. Import file `360Retail-Environment.postman_environment.json`\n3. Chạy request **Register** hoặc **Login** trước → token tự động lưu\n4. Chạy **Start Trial** → storeId tự động lưu\n5. Tất cả request sau đó sẽ dùng token + storeId tự động\n\n## Role hệ thống\n- **PotentialOwner**: Mới đăng ký, chưa có store\n- **StoreOwner**: Đã tạo store (Trial hoặc Paid)\n- **Manager**: Quản lý store (được Owner mời)\n- **Staff**: Nhân viên bán hàng\n- **SuperAdmin**: Quản trị hệ thống",
+        "description": "# 360Retail - Full API Collection\n\n> **Base URL**: `{{baseUrl}}` (default: http://localhost:5001)\n>\n> **Cập nhật**: 28/02/2026\n\n## Hướng dẫn sử dụng\n\n1. Import file này vào Postman\n2. Import file `360Retail-Environment.postman_environment.json`\n3. Chạy request **Register** → nhận OTP qua email → **Verify Email** → **Login**\n4. Chạy **Start Trial** → storeId tự động lưu\n5. Tất cả request sau đó sẽ dùng token + storeId tự động\n\n## Role hệ thống\n- **PotentialOwner**: Mới đăng ký, chưa có store\n- **StoreOwner**: Đã tạo store (Trial hoặc Paid)\n- **Manager**: Quản lý store (được Owner mời)\n- **Staff**: Nhân viên bán hàng\n- **SuperAdmin**: Quản trị hệ thống",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "auth": {
@@ -62,7 +62,7 @@
                         "header": [],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"email\": \"owner@test.com\",\n  \"password\": \"Test@123\",\n  \"userName\": \"TestOwner\",\n  \"storeName\": \"Store Demo\"\n}",
+                            "raw": "{\n  \"email\": \"owner@test.com\",\n  \"password\": \"Test@123\",\n  \"fullName\": \"Test Owner\",\n  \"phoneNumber\": \"0901234567\"\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -80,7 +80,69 @@
                                 "register"
                             ]
                         },
-                        "description": "Đăng ký tài khoản mới. Sau khi đăng ký, user có role **PotentialOwner** (chưa có store)."
+                        "description": "Đăng ký tài khoản mới. Backend gửi **mã OTP 6 số** về email.\n\n⚠️ **Sau khi Register**: phải gọi **Verify Email** với mã OTP trước khi Login.\n\nResponse: `{ message: 'Đăng ký thành công. Vui lòng kiểm tra email để nhập mã OTP xác nhận.' }`"
+                    }
+                },
+                {
+                    "name": "Verify Email (OTP) ⭐",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"owner@test.com\",\n  \"otpCode\": \"123456\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/verify-email",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "verify-email"
+                            ]
+                        },
+                        "description": "Xác nhận email bằng mã OTP 6 chữ số. Gọi sau Register.\n\n**Flow**: Register → check email → lấy OTP → gọi endpoint này → Login\n\nOTP hết hạn sau **10 phút**. Nếu hết hạn → gọi Resend OTP."
+                    }
+                },
+                {
+                    "name": "Resend OTP",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"owner@test.com\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/resend-otp",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "resend-otp"
+                            ]
+                        },
+                        "description": "Gửi lại mã OTP xác nhận email. Dùng khi OTP hết hạn (10 phút).\n\nResponse luôn 200 (không tiết lộ email có tồn tại hay không)."
                     }
                 },
                 {
