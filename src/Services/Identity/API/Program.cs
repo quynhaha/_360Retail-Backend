@@ -67,6 +67,23 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 #endregion
 
+#region ===== REDIS CACHE =====
+var redisConn = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConn))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConn;
+        options.InstanceName = "360Retail_Identity_";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+builder.Services.AddSingleton<TokenBlacklistService>();
+#endregion
+
 #region ===== APPLICATION SERVICES =====
 
 builder.Services.AddScoped<IAuthService, AuthService>();

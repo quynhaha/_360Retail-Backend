@@ -14,6 +14,16 @@ services:
     networks:
       - 360retail-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: 360retail-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - 360retail-network
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: 360retail-pgadmin
@@ -43,10 +53,13 @@ services:
       # Resend (Email Service)
       - Resend__ApiKey=${RESEND_API_KEY}
       - Resend__FromEmail=${RESEND_FROM_EMAIL}
+      # Redis Cache
+      - ConnectionStrings__Redis=redis:6379
     ports:
       - "5297:8080"
     depends_on:
       - postgres
+      - redis
     networks:
       - 360retail-network
 
@@ -90,6 +103,8 @@ services:
       - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET}
       - ServiceUrls__CrmService=http://crm-api:8080
       - InternalApi__Key=360retail-internal-secret-key-2026
+      # Redis Cache
+      - ConnectionStrings__Redis=redis:6379
       # Resend (Email Service)
       - Resend__ApiKey=${RESEND_API_KEY}
       - Resend__FromEmail=${RESEND_FROM_EMAIL}
@@ -97,6 +112,7 @@ services:
       - "5091:8080"
     depends_on:
       - postgres
+      - redis
     networks:
       - 360retail-network
 
@@ -169,3 +185,4 @@ networks:
 
 volumes:
   postgres_data:
+  redis_data:

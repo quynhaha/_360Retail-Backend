@@ -24,6 +24,23 @@ var connString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<SalesDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ===== REDIS CACHE =====
+var redisConn = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConn))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConn;
+        options.InstanceName = "360Retail_Sales_";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache(); // Fallback for local dev
+}
+builder.Services.AddSingleton<CacheService>();
+
 builder.Services.AddControllers();
 
 // Add CORS

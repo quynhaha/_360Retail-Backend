@@ -1,5 +1,6 @@
 ﻿using _360Retail.Services.Identity.Application.DTOs;
 using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Services.Identity.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -13,10 +14,12 @@ namespace _360Retail.Services.Identity.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly TokenBlacklistService _tokenBlacklist;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, TokenBlacklistService tokenBlacklist)
         {
             _authService = authService;
+            _tokenBlacklist = tokenBlacklist;
         }
 
         // LOGIN
@@ -131,6 +134,30 @@ namespace _360Retail.Services.Identity.API.Controllers
         {
             await _authService.ResetPasswordAsync(dto.Email, dto.ResetCode, dto.NewPassword);
             return Ok(new { message = "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại" });
+        }
+
+        /// <summary>
+        /// Logout — blacklist the current JWT token in Redis
+        /// </summary>
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var token = HttpContext.Request.Headers["Authorization"]
+                .ToString().Replace("Bearer ", "");
+
+            if (string.IsNullOrEmpty(token))
+                return BadRequest(new { message = "No token provided" });
+
+            // Parse token to get expiry
+            var handler = new JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(token);
+            var remaining = jwt.ValidTo - DateTime.UtcNow;
+
+            if (remaining > TimeSpan.Zero)
+                await _tokenBlacklist.BlacklistAsync(token, remaining);
+
+            return Ok(new { message = "Logged out successfully" });
         }
 
     }
