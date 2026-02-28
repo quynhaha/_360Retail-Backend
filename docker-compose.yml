@@ -63,6 +63,12 @@ services:
       # Resend (Email Service)
       - Resend__ApiKey=${RESEND_API_KEY}
       - Resend__FromEmail=${RESEND_FROM_EMAIL}
+      # SePay (Bank Transfer Payment)
+      - SePay__MerchantId=SP-LIVE-TH362793
+      - SePay__SecretKey=spsk_live_1GyhEpBx8kXmgKixUVxJGRUhjr3EmXH4
+      - SePay__BankName=MBBank
+      - SePay__AccountNumber=0917213712
+      - SePay__AccountName=TRAN HOANG TUAN MINH
     ports:
       - "5031:8080"
     depends_on:

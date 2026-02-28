@@ -49,8 +49,10 @@
 | 25 | GET | `/saas/stores/my-store` | ✅ Staff | Store tôi đang làm việc |
 | 26 | PUT | `/saas/stores/{id}` | ✅ Owner | Cập nhật store (tên, GPS, phone) |
 | 27 | DELETE | `/saas/stores/{id}` | ✅ Owner | Xóa store (soft delete) |
-| 28 | GET | `/saas/payments/initiate` | ✅ | Tạo link thanh toán VNPay |
+| 28 | GET | `/saas/payments/initiate?provider=vnpay` | ✅ | Tạo link thanh toán VNPay |
+| 28b | GET | `/saas/payments/initiate?provider=sepay` | ✅ | Tạo QR chuyển khoản (SePay) |
 | 29 | GET | `/saas/payments/vnpay-return` | ❌ | VNPay callback |
+| 29b | POST | `/saas/payments/sepay-webhook` | ❌ | SePay IPN webhook |
 | 30 | POST | `/saas/plan-reviews` | ✅ Owner | Tạo đánh giá gói đã mua |
 | 31 | GET | `/saas/plan-reviews/me/{planId}` | ✅ | Xem review của tôi |
 | 32 | GET | `/saas/plan-reviews/plan/{planId}` | ❌ | DS reviews 1 gói (public) |
@@ -309,13 +311,47 @@ POST /saas/subscriptions/purchase
   "planId": "xxx"
 }
 ```
-→ Response chứa `paymentUrl` để redirect thanh toán
+→ Response chứa `paymentId` để initiate thanh toán
 
-### Bước 2.3: Thanh toán VNPay Sandbox
+### Bước 2.3: Chọn phương thức thanh toán
+
+#### Option A — VNPay (Sandbox demo)
+```
+GET /saas/payments/initiate?paymentId={id}&provider=vnpay
+```
+→ Redirect tới trang VNPay
 - Ngân hàng: NCB
 - Số thẻ: 9704198526191432198
 - Tên: NGUYEN VAN A
 - Ngày: 07/15 | OTP: 123456
+
+#### Option B — SePay (Chuyển khoản thật 🔥)
+```
+GET /saas/payments/initiate?paymentId={id}&provider=sepay
+```
+→ Response:
+```json
+{
+  "success": true,
+  "data": {
+    "provider": "sepay",
+    "paymentCode": "360RBF630764",
+    "qrCodeUrl": "https://img.vietqr.io/image/MB-0917213712-compact.png?...",
+    "bankInfo": {
+      "bankName": "MBBank",
+      "accountNumber": "0917213712",
+      "accountName": "TRAN HOANG TUAN MINH",
+      "amount": 199000,
+      "content": "360RBF630764"
+    },
+    "instruction": "Chuyển khoản 199,000 VND tới MBBank - 0917213712 với nội dung: 360RBF630764"
+  }
+}
+```
+FE hiển thị:
+- `qrCodeUrl` → `<img>` cho user quét QR
+- `bankInfo` → hiển thị thông tin CK thủ công
+- `paymentCode` → nội dung CK (bắt buộc đúng để SePay nhận diện)
 
 ### Bước 2.4: Refresh Token sau thanh toán
 ```
