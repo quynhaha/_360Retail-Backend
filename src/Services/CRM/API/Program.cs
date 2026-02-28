@@ -12,8 +12,15 @@ using _360Retail.Services.CRM.Application.Mappings;
 using _360Retail.Services.CRM.API.Middleware;
 using _360Retail.Services.CRM.API.Services;
 using _360Retail.Shared.Common.Middleware;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ===== SERILOG =====
+builder.Host.UseSerilog((context, config) => config
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.WithProperty("Service", "CRM")
+    .WriteTo.Console());
 
 // Add services to the container.
 builder.Services.AddControllers()
@@ -22,6 +29,7 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
 builder.Services.AddSwaggerGen(option =>
 {
     option.SwaggerDoc("v1", new OpenApiInfo { Title = "CRM API", Version = "v1" });
@@ -109,10 +117,14 @@ app.UseMiddleware<IdempotencyMiddleware>(); // Add Idempotency Middleware
 
 app.UseGlobalExceptionHandler();
 
+// Serilog request logging
+app.UseSerilogRequestLogging();
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

@@ -9,12 +9,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using Serilog;
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
+
+// ===== SERILOG =====
+builder.Host.UseSerilog((context, config) => config
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.WithProperty("Service", "Sales")
+    .WriteTo.Console());
+
 var connString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Logging.AddConsole();
-var startupLogger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger("Startup");
-startupLogger.LogInformation("Sales API connecting to database: {ConnectionString}", connString);
 
 
 builder.Services.AddDbContext<SalesDbContext>(options =>
@@ -37,6 +42,7 @@ builder.Services.AddCors(options =>
 // Add services
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
 builder.Services.AddSwaggerGen(option =>
 {
     option.SwaggerDoc("v1", new OpenApiInfo { Title = "Sales API", Version = "v1" });
@@ -122,6 +128,9 @@ var app = builder.Build();
 // Global Exception Handler - must be first
 app.UseGlobalExceptionHandler();
 
+// Serilog request logging
+app.UseSerilogRequestLogging();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -154,6 +163,7 @@ app.MapGet("/weatherforecast", () =>
 .WithName("GetWeatherForecast")
 .WithOpenApi();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)

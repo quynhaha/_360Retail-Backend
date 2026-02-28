@@ -11,12 +11,20 @@ using _360Retail.Services.Saas.API.Services;
 using Microsoft.OpenApi.Models;
 using _360Retail.Services.Saas.Infrastructure.HttpClients;
 using _360Retail.Shared.Email;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ===== SERILOG =====
+builder.Host.UseSerilog((context, config) => config
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.WithProperty("Service", "SaaS")
+    .WriteTo.Console());
 
 // Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -125,6 +133,9 @@ var app = builder.Build();
 // Global Exception Handler - must be first
 app.UseGlobalExceptionHandler();
 
+// Serilog request logging
+app.UseSerilogRequestLogging();
+
 // Middleware
 if (app.Environment.IsDevelopment())
 {
@@ -139,5 +150,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
