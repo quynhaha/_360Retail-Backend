@@ -3,6 +3,7 @@ using _360Retail.Services.Saas.Application.DTOs.Subscriptions;
 using _360Retail.Services.Saas.Application.Interfaces;
 using _360Retail.Services.Saas.API.Services;
 using _360Retail.Services.Saas.Infrastructure.HttpClients;
+using Microsoft.AspNetCore.Authorization;
 
 namespace _360Retail.Services.Saas.API.Controllers;
 
@@ -12,17 +13,20 @@ public class PaymentsController : ControllerBase
 {
     private readonly ISubscriptionService _subscriptionService;
     private readonly VNPayService _vnpayService;
+    private readonly SePayService _sePayService;
     private readonly IIdentityClient _identityClient;
     private readonly IConfiguration _config;
 
     public PaymentsController(
         ISubscriptionService subscriptionService,
         VNPayService vnpayService,
+        SePayService sePayService,
         IIdentityClient identityClient,
         IConfiguration config)
     {
         _subscriptionService = subscriptionService;
         _vnpayService = vnpayService;
+        _sePayService = sePayService;
         _identityClient = identityClient;
         _config = config;
     }
@@ -31,8 +35,12 @@ public class PaymentsController : ControllerBase
     /// Initiate payment for an existing pending payment (e.g., new store subscription)
     /// Returns payment URL for client to redirect
     /// </summary>
+    /// <summary>
+    /// Initiate payment — supports ?provider=vnpay (default) or ?provider=sepay
+    /// VNPay: returns redirect URL | SePay: returns QR code + bank info
+    /// </summary>
     [HttpGet("initiate")]
-    public async Task<IActionResult> InitiatePayment([FromQuery] Guid paymentId)
+    public async Task<IActionResult> InitiatePayment([FromQuery] Guid paymentId, [FromQuery] string provider = "vnpay")
     {
         var payment = await _subscriptionService.GetPaymentByIdAsync(paymentId);
         
@@ -44,14 +52,23 @@ public class PaymentsController : ControllerBase
 
         // Get plan info
         var planInfo = await _subscriptionService.GetPaymentPlanInfoAsync(paymentId);
-        
-        // Build return URL from VNPay config
-        var returnUrl = _config["VNPay:ReturnUrl"] ?? "http://localhost:5001/api/payments/vnpay-return";
 
-        // Get client IP
+        // === SePay: return QR code + bank transfer info ===
+        if (provider.Equals("sepay", StringComparison.OrdinalIgnoreCase))
+        {
+            var sePayResult = _sePayService.CreatePaymentInfo(
+                payment.Id,
+                payment.Amount,
+                planInfo?.PlanName ?? "360Retail"
+            );
+
+            return Ok(new { success = true, data = sePayResult });
+        }
+
+        // === VNPay (default): return redirect URL ===
+        var returnUrl = _config["VNPay:ReturnUrl"] ?? "http://localhost:5001/api/payments/vnpay-return";
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
 
-        // Create VNPay payment URL
         var orderInfo = $"Thanh toan goi {planInfo?.PlanName ?? "360Retail"} - 360Retail";
         var paymentUrl = _vnpayService.CreatePaymentUrl(
             payment.Id,
@@ -61,7 +78,6 @@ public class PaymentsController : ControllerBase
             ipAddress
         );
 
-        // Return payment URL for client to redirect (same as purchase endpoint)
         return Ok(new
         {
             success = true,
@@ -86,11 +102,10 @@ public class PaymentsController : ControllerBase
 
         if (!isValid)
         {
-            return BadRequest(new PaymentResultDto(
-                false,
-                Guid.Empty,
-                "Invalid signature from VNPay"
-            ));
+            var frontendUrlInvalid = _config["ServiceUrls:FrontendUrl"] ?? "http://localhost:3000";
+            var invalidMessage = "Invalid signature from VNPay";
+            var invalidRedirect = $"{frontendUrlInvalid}/payment/failed?paymentId={Guid.Empty}&message={Uri.EscapeDataString(invalidMessage)}";
+            return Redirect(invalidRedirect);
         }
 
         var frontendUrl = _config["ServiceUrls:FrontendUrl"] ?? "http://localhost:3000";
@@ -108,21 +123,15 @@ public class PaymentsController : ControllerBase
                 {
                     await _identityClient.ActivateUserSubscriptionAsync(userId.Value);
                 }
-                
-                return Ok(new PaymentResultDto(
-                    true,
-                    paymentId,
-                    "Thanh toán thành công! Gói dịch vụ đã được kích hoạt.",
-                    $"{frontendUrl}/payment/success?paymentId={paymentId}"
-                ));
+
+                var successRedirect = $"{frontendUrl}/payment/success?paymentId={paymentId}";
+                return Redirect(successRedirect);
             }
             else
             {
-                return BadRequest(new PaymentResultDto(
-                    false,
-                    paymentId,
-                    "Không tìm thấy thông tin thanh toán"
-                ));
+                var notFoundMessage = "Không tìm thấy thông tin thanh toán";
+                var notFoundRedirect = $"{frontendUrl}/payment/failed?paymentId={paymentId}&message={Uri.EscapeDataString(notFoundMessage)}";
+                return Redirect(notFoundRedirect);
             }
         }
         else
@@ -131,12 +140,8 @@ public class PaymentsController : ControllerBase
             var errorMessage = GetVNPayErrorMessage(transactionStatus);
             await _subscriptionService.MarkPaymentFailedAsync(paymentId, errorMessage);
 
-            return Ok(new PaymentResultDto(
-                false,
-                paymentId,
-                errorMessage,
-                $"{frontendUrl}/payment/failed?paymentId={paymentId}"
-            ));
+            var failedRedirect = $"{frontendUrl}/payment/failed?paymentId={paymentId}&message={Uri.EscapeDataString(errorMessage)}";
+            return Redirect(failedRedirect);
         }
     }
 

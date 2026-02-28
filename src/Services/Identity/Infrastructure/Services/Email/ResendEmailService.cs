@@ -1,66 +1,40 @@
-﻿using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using _360Retail.Services.Identity.Application.Interfaces;
-using Microsoft.Extensions.Configuration;
+﻿using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Shared.Email;
+using Microsoft.Extensions.Logging;
 
 namespace _360Retail.Services.Identity.Infrastructure.Services.Email;
 
 public class ResendEmailService : IEmailService
 {
-    private readonly HttpClient _httpClient;
-    private readonly IConfiguration _config;
+    private readonly IEmailSender _emailSender;
+    private readonly ILogger<ResendEmailService> _logger;
 
-    public ResendEmailService(HttpClient httpClient, IConfiguration config)
+    public ResendEmailService(IEmailSender emailSender, ILogger<ResendEmailService> logger)
     {
-        _httpClient = httpClient;
-        _config = config;
+        _emailSender = emailSender;
+        _logger = logger;
     }
 
-    public async Task SendTemporaryPasswordEmailAsync(string toEmail, string tempPassword)
+    public async Task SendStaffInviteEmailAsync(
+        string toEmail,
+        string employeeName,
+        string storeName,
+        string role,
+        string tempPassword)
     {
-        var apiKey = _config["Resend:ApiKey"];
-        var fromEmail = _config["Resend:FromEmail"];
+        var html = EmailTemplateService.StaffInvite(employeeName, storeName, role, tempPassword);
+        await _emailSender.SendAsync(toEmail, $"[360Retail] Chào mừng bạn đến {storeName}", html);
+        _logger.LogInformation("Staff invite email sent to {Email} for store {Store}", toEmail, storeName);
+    }
 
-        var request = new
-        {
-            from = fromEmail,
-            to = new[] { toEmail },
-            subject = "Your 360Retail temporary password",
-            html = $@"
-                <h3>Welcome to 360Retail</h3>
-                <p>Your temporary password is:</p>
-                <h2>{tempPassword}</h2>
-                <p>Please login and change your password immediately.</p>
-                <p>
-                    Login here:
-                    <a href='https://360retail.app/login'>https://360retail.app/login</a>
-                </p>
-                <br/>
-                <small>This password can only be used once.</small>
-            "
-        };
-
-        var httpRequest = new HttpRequestMessage(
-            HttpMethod.Post,
-            "https://api.resend.com/emails"
-        );
-
-        httpRequest.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", apiKey);
-
-        httpRequest.Content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8,
-            "application/json"
-        );
-
-        var response = await _httpClient.SendAsync(httpRequest);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Resend email failed: {body}");
-        }
+    public async Task SendForgotPasswordEmailAsync(
+        string toEmail,
+        string userName,
+        string resetCode,
+        int expiryMinutes = 15)
+    {
+        var html = EmailTemplateService.ForgotPassword(userName, resetCode, expiryMinutes);
+        await _emailSender.SendAsync(toEmail, "[360Retail] Đặt lại mật khẩu", html);
+        _logger.LogInformation("Forgot password email sent to {Email}", toEmail);
     }
 }

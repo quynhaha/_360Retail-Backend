@@ -1,0 +1,2531 @@
+{
+    "info": {
+        "_postman_id": "360retail-api-collection",
+        "name": "360Retail API",
+        "description": "# 360Retail - Full API Collection\n\n> **Base URL**: `{{baseUrl}}` (default: http://localhost:5001)\n>\n> **Cập nhật**: 27/02/2026\n\n## Hướng dẫn sử dụng\n\n1. Import file này vào Postman\n2. Import file `360Retail-Environment.postman_environment.json`\n3. Chạy request **Register** hoặc **Login** trước → token tự động lưu\n4. Chạy **Start Trial** → storeId tự động lưu\n5. Tất cả request sau đó sẽ dùng token + storeId tự động\n\n## Role hệ thống\n- **PotentialOwner**: Mới đăng ký, chưa có store\n- **StoreOwner**: Đã tạo store (Trial hoặc Paid)\n- **Manager**: Quản lý store (được Owner mời)\n- **Staff**: Nhân viên bán hàng\n- **SuperAdmin**: Quản trị hệ thống",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{accessToken}}",
+                "type": "string"
+            }
+        ]
+    },
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    ""
+                ]
+            }
+        }
+    ],
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:5001"
+        }
+    ],
+    "item": [
+        {
+            "name": "🔐 1. Identity - Auth",
+            "description": "Đăng ký, đăng nhập, quản lý tài khoản",
+            "item": [
+                {
+                    "name": "Register",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200 || pm.response.code === 201) {",
+                                    "    pm.test('Register thành công', function() {",
+                                    "        pm.response.to.be.success;",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"owner@test.com\",\n  \"password\": \"Test@123\",\n  \"userName\": \"TestOwner\",\n  \"storeName\": \"Store Demo\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "description": "Đăng ký tài khoản mới. Sau khi đăng ký, user có role **PotentialOwner** (chưa có store)."
+                    }
+                },
+                {
+                    "name": "Login ⭐",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var json = pm.response.json();",
+                                    "    pm.environment.set('accessToken', json.accessToken);",
+                                    "    pm.test('Login OK - Token saved', function() {",
+                                    "        pm.expect(json.accessToken).to.be.a('string');",
+                                    "    });",
+                                    "    // Decode JWT to get storeId",
+                                    "    var payload = json.accessToken.split('.')[1];",
+                                    "    var decoded = JSON.parse(atob(payload));",
+                                    "    if (decoded.store_id) {",
+                                    "        pm.environment.set('storeId', decoded.store_id);",
+                                    "        console.log('StoreId saved: ' + decoded.store_id);",
+                                    "    }",
+                                    "    var userId = decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];",
+                                    "    if (userId) {",
+                                    "        pm.environment.set('userId', userId);",
+                                    "        console.log('UserId saved: ' + userId);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"owner@test.com\",\n  \"password\": \"Test@123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Đăng nhập → Token tự động lưu vào biến `accessToken`. StoreId và UserId cũng được extract từ JWT.\n\nResponse: `{ accessToken, expiresAt, mustChangePassword }`"
+                    }
+                },
+                {
+                    "name": "Login Google/Facebook",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"provider\": \"Google\",\n  \"idToken\": \"google-oauth-token-here\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/external",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "external"
+                            ]
+                        },
+                        "description": "Đăng nhập Social (Google/Facebook). Provider: `Google` hoặc `Facebook`."
+                    }
+                },
+                {
+                    "name": "Get My Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/me",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "me"
+                            ]
+                        },
+                        "description": "Lấy thông tin user đang đăng nhập."
+                    }
+                },
+                {
+                    "name": "Change Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"currentPassword\": \"Test@123\",\n  \"newPassword\": \"NewPass@456\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/change-password",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "change-password"
+                            ]
+                        },
+                        "description": "Đổi mật khẩu. Yêu cầu mật khẩu hiện tại."
+                    }
+                },
+                {
+                    "name": "Refresh Token (switch store)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var json = pm.response.json();",
+                                    "    if (json.accessToken) {",
+                                    "        pm.environment.set('accessToken', json.accessToken);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/refresh-access?storeId={{storeId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "refresh-access"
+                            ],
+                            "query": [
+                                {
+                                    "key": "storeId",
+                                    "value": "{{storeId}}"
+                                }
+                            ]
+                        },
+                        "description": "Refresh token → đổi store context. Dùng khi Owner có nhiều store."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔐 2. Identity - Subscription",
+            "description": "Quản lý Trial & Subscription",
+            "item": [
+                {
+                    "name": "Start Trial ⭐",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var json = pm.response.json();",
+                                    "    if (json.storeId) {",
+                                    "        pm.environment.set('storeId', json.storeId);",
+                                    "        console.log('StoreId saved from trial: ' + json.storeId);",
+                                    "    }",
+                                    "    pm.test('Trial started', function() { pm.response.to.be.success; });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/subscription/start-trial",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "subscription",
+                                "start-trial"
+                            ]
+                        },
+                        "description": "Bắt đầu Trial 7 ngày miễn phí. Tự tạo store + nâng role StoreOwner.\n\n⚠️ **Sau khi Start Trial**: phải Login lại để lấy token mới (có storeId)."
+                    }
+                },
+                {
+                    "name": "Subscription Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/subscription/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "subscription",
+                                "status"
+                            ]
+                        },
+                        "description": "Trạng thái subscription hiện tại (Trial/Active/Expired)."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔐 3. Identity - Staff",
+            "description": "Mời nhân viên vào store",
+            "item": [
+                {
+                    "name": "Invite Staff",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"staff@test.com\",\n  \"storeId\": \"{{storeId}}\",\n  \"roleInStore\": \"Staff\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/staff/invite",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "staff",
+                                "invite"
+                            ]
+                        },
+                        "description": "Mời nhân viên vào store. Role: `Staff` hoặc `Manager`.\n\n**Quy trình**:\n1. Owner gọi endpoint này\n2. Hệ thống tạo tài khoản + gán role\n3. Staff login bằng email + password mặc định (`ChangeMe@123`)\n4. Staff đổi password lần đầu"
+                    }
+                },
+                {
+                    "name": "My Stores",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/user-stores/stores-my",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "user-stores",
+                                "stores-my"
+                            ]
+                        },
+                        "description": "DS store mà user đang thuộc (Owner hoặc Staff)."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🏪 4. SaaS - Stores",
+            "description": "Quản lý cửa hàng + GPS",
+            "item": [
+                {
+                    "name": "Get All Stores",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/stores",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "stores"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get My Store",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/stores/my-store",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "stores",
+                                "my-store"
+                            ]
+                        },
+                        "description": "Store hiện tại của tôi (theo storeId trong token)."
+                    }
+                },
+                {
+                    "name": "Get Store by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/stores/{{storeId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "stores",
+                                "{{storeId}}"
+                            ]
+                        },
+                        "description": "Chi tiết store. Response có `latitude`, `longitude` (null nếu chưa cài GPS)."
+                    }
+                },
+                {
+                    "name": "Get My Owned Stores",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/stores/my-owned-stores",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "stores",
+                                "my-owned-stores"
+                            ]
+                        },
+                        "description": "DS stores mà Owner sở hữu."
+                    }
+                },
+                {
+                    "name": "Update Store + GPS ⭐",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"address\": \"123 Nguyễn Huệ, Quận 1, TP.HCM\",\n  \"latitude\": 10.7769,\n  \"longitude\": 106.7009\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/stores/{{storeId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "stores",
+                                "{{storeId}}"
+                            ]
+                        },
+                        "description": "Cập nhật store: tên, địa chỉ, GPS.\n\n**GPS Rules:**\n- `latitude`: -90 → 90\n- `longitude`: -180 → 180\n- Phải gửi CẢ 2 hoặc không gửi cái nào\n- Sau khi cài GPS → Geofencing check-in hoạt động (200m)"
+                    }
+                },
+                {
+                    "name": "Delete Store",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/stores/{{storeId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "stores",
+                                "{{storeId}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🏪 5. SaaS - Subscriptions",
+            "description": "Gói dịch vụ & thanh toán",
+            "item": [
+                {
+                    "name": "Get Plans (Public)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/subscriptions/plans",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "subscriptions",
+                                "plans"
+                            ]
+                        },
+                        "description": "DS gói dịch vụ: Trial (7 ngày free), Basic, Pro, Yearly."
+                    }
+                },
+                {
+                    "name": "My Subscription",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/subscriptions/my",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "subscriptions",
+                                "my"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Purchase Plan",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"planId\": \"plan-uuid-here\",\n  \"storeId\": \"{{storeId}}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/subscriptions/purchase",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "subscriptions",
+                                "purchase"
+                            ]
+                        },
+                        "description": "Mua gói → tạo payment → redirect VNPay."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "💳 5b. Payments (VNPay + SePay)",
+            "description": "Thanh toán gói dịch vụ: VNPay (sandbox) hoặc SePay (chuyển khoản thật)",
+            "item": [
+                {
+                    "name": "Initiate Payment (VNPay)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/payments/initiate?paymentId={{paymentId}}&provider=vnpay",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "payments",
+                                "initiate"
+                            ],
+                            "query": [
+                                {
+                                    "key": "paymentId",
+                                    "value": "{{paymentId}}"
+                                },
+                                {
+                                    "key": "provider",
+                                    "value": "vnpay"
+                                }
+                            ]
+                        },
+                        "description": "Tạo link thanh toán VNPay (sandbox). Redirect user tới VNPay gateway.\n\nTest: NCB / 9704198526191432198 / NGUYEN VAN A / 07/15 / OTP 123456"
+                    }
+                },
+                {
+                    "name": "Initiate Payment (SePay) 🔥",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/payments/initiate?paymentId={{paymentId}}&provider=sepay",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "payments",
+                                "initiate"
+                            ],
+                            "query": [
+                                {
+                                    "key": "paymentId",
+                                    "value": "{{paymentId}}"
+                                },
+                                {
+                                    "key": "provider",
+                                    "value": "sepay"
+                                }
+                            ]
+                        },
+                        "description": "Tạo QR chuyển khoản ngân hàng (SePay). Tiền thật về MBBank.\n\nResponse:\n- qrCodeUrl: QR code VietQR → user quét bằng app bank\n- bankInfo: MBBank / 0917213712 / TRAN HOANG TUAN MINH\n- paymentCode: nội dung CK (bắt buộc đúng)\n- instruction: hướng dẫn CK"
+                    }
+                },
+                {
+                    "name": "SePay Webhook Test (simulate)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": 999,\n  \"gateway\": \"MBBank\",\n  \"transactionDate\": \"2026-02-28 14:00:00\",\n  \"accountNumber\": \"0917213712\",\n  \"code\": \"360RXXXXXXXX\",\n  \"content\": \"360RXXXXXXXX thanh toan goi Basic\",\n  \"transferType\": \"in\",\n  \"transferAmount\": 199000,\n  \"accumulated\": 5000000,\n  \"referenceCode\": \"FT2602800001\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/payments/sepay-webhook",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "payments",
+                                "sepay-webhook"
+                            ]
+                        },
+                        "description": "Giả lập SePay webhook (IPN). Thay `360RXXXXXXXX` bằng paymentCode thật từ Initiate SePay.\n\nKhi deploy: SePay tự gọi endpoint này khi có CK vào TK MBBank."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⭐ 6. SaaS - Plan Reviews",
+            "description": "Đánh giá gói SaaS (Owner review, Public xem)",
+            "item": [
+                {
+                    "name": "Create Review",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"planId\": \"plan-uuid-here\",\n  \"rating\": 5,\n  \"content\": \"Gói rất tốt, dễ sử dụng!\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews"
+                            ]
+                        },
+                        "description": "Tạo đánh giá gói đã mua.\n- Role: StoreOwner\n- Phải có subscription active\n- Mỗi user chỉ review 1 lần/gói"
+                    }
+                },
+                {
+                    "name": "My Review for a Plan",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews/me/:planId",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews",
+                                "me",
+                                ":planId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "planId",
+                                    "value": "plan-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Xem review của tôi cho 1 gói. `data = null` nếu chưa review → FE ẩn/hiện nút Đánh giá."
+                    }
+                },
+                {
+                    "name": "Reviews by Plan (Public)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews/plan/:planId?page=1&pageSize=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews",
+                                "plan",
+                                ":planId"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "10"
+                                }
+                            ],
+                            "variable": [
+                                {
+                                    "key": "planId",
+                                    "value": "plan-uuid-here"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Summary 1 Plan (Public)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews/plan/:planId/summary",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews",
+                                "plan",
+                                ":planId",
+                                "summary"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "planId",
+                                    "value": "plan-uuid-here"
+                                }
+                            ]
+                        },
+                        "description": "Tổng hợp rating 1 gói: avgRating, totalReviews, distribution 1-5."
+                    }
+                },
+                {
+                    "name": "Summary ALL Plans (Public) ⭐",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews/summary",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews",
+                                "summary"
+                            ]
+                        },
+                        "description": "Tổng hợp rating TẤT CẢ gói → dùng trên trang Pricing."
+                    }
+                },
+                {
+                    "name": "[Admin] All Reviews",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews/admin?page=1&pageSize=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews",
+                                "admin"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "20"
+                                },
+                                {
+                                    "key": "planId",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "rating",
+                                    "value": "",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "SuperAdmin: DS tất cả reviews. Filter: planId, rating."
+                    }
+                },
+                {
+                    "name": "[Admin] Dashboard",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews/admin/dashboard",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews",
+                                "admin",
+                                "dashboard"
+                            ]
+                        },
+                        "description": "SuperAdmin: Dashboard thống kê reviews — overallAvg, totalReviews, planStats[]."
+                    }
+                },
+                {
+                    "name": "[Admin] Delete Review",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews/admin/:reviewId",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews",
+                                "admin",
+                                ":reviewId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "reviewId",
+                                    "value": "review-uuid"
+                                }
+                            ]
+                        },
+                        "description": "SuperAdmin: Xóa review spam/vi phạm."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🛒 7. Sales - Categories",
+            "description": "Danh mục sản phẩm",
+            "item": [
+                {
+                    "name": "Get Categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/categories",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "categories"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Category",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"categoryName\": \"Điện thoại\",\n  \"isActive\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/categories",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "categories"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Category",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"categoryName\": \"Điện thoại di động\",\n  \"isActive\": true\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/categories/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "categories",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "category-uuid"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Category",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/categories/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "categories",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "category-uuid"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🛒 8. Sales - Products",
+            "description": "Sản phẩm",
+            "item": [
+                {
+                    "name": "Get Products",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/products?page=1&pageSize=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "products"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Product by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/products/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "products",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "product-uuid"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Product",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"productName\": \"iPhone 15\",\n  \"sku\": \"IP15-128\",\n  \"categoryId\": \"category-uuid\",\n  \"costPrice\": 20000000,\n  \"sellingPrice\": 25000000,\n  \"stock\": 50,\n  \"unit\": \"cái\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/products",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "products"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Product",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"productName\": \"iPhone 15 Pro\",\n  \"sellingPrice\": 28000000\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/products/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "products",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "product-uuid"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Product",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/products/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "products",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "product-uuid"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🛒 9. Sales - Orders",
+            "description": "Đơn hàng POS",
+            "item": [
+                {
+                    "name": "Create Order (POS)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"customerId\": null,\n  \"items\": [\n    {\n      \"productId\": \"product-uuid\",\n      \"quantity\": 2,\n      \"productVariantId\": null\n    }\n  ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/orders",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "orders"
+                            ]
+                        },
+                        "description": "Tạo đơn hàng POS. `customerId` optional (nếu có → tích điểm loyalty)."
+                    }
+                },
+                {
+                    "name": "Get Orders",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/orders?page=1&pageSize=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "orders"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Order by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/orders/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "orders",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "order-uuid"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Order Status",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"Completed\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/orders/:id/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "orders",
+                                ":id",
+                                "status"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "order-uuid"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Cancel Order",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/orders/:id/cancel",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "orders",
+                                ":id",
+                                "cancel"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "order-uuid"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🛒 10. Sales - Inventory",
+            "description": "Quản lý kho: nhập/xuất",
+            "item": [
+                {
+                    "name": "Create Ticket (Import/Export)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"Import\",\n  \"note\": \"Nhập hàng iPhone\",\n  \"items\": [\n    {\n      \"productId\": \"product-uuid\",\n      \"quantity\": 50\n    }\n  ]\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/inventory",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "inventory"
+                            ]
+                        },
+                        "description": "Tạo phiếu nhập/xuất kho. Type: `Import` hoặc `Export`.\nPhiếu mới = Draft, stock chưa thay đổi."
+                    }
+                },
+                {
+                    "name": "Get Tickets",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/inventory?type=Import&status=Draft&page=1&pageSize=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "inventory"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "Import"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "Draft"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Ticket by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/inventory/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "inventory",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "ticket-uuid"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Confirm Ticket ⭐",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/inventory/:id/confirm",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "inventory",
+                                ":id",
+                                "confirm"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "ticket-uuid"
+                                }
+                            ]
+                        },
+                        "description": "Xác nhận phiếu → cập nhật stock thực tế."
+                    }
+                },
+                {
+                    "name": "Cancel Ticket",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/inventory/:id/cancel",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "inventory",
+                                ":id",
+                                "cancel"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "ticket-uuid"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📊 11. Sales - Dashboard",
+            "description": "Thống kê doanh thu, sản phẩm, kho",
+            "item": [
+                {
+                    "name": "Overview",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/dashboard/overview?from=2026-02-01&to=2026-02-28",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "dashboard",
+                                "overview"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2026-02-01"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-02-28"
+                                }
+                            ]
+                        },
+                        "description": "Tổng quan: doanh thu, đơn hàng, sản phẩm, tăng trưởng."
+                    }
+                },
+                {
+                    "name": "Revenue Chart",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/dashboard/revenue-chart?from=2026-02-01&to=2026-02-28&groupBy=day",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "dashboard",
+                                "revenue-chart"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2026-02-01"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-02-28"
+                                },
+                                {
+                                    "key": "groupBy",
+                                    "value": "day"
+                                }
+                            ]
+                        },
+                        "description": "Biểu đồ doanh thu. groupBy: `day` | `week` | `month`."
+                    }
+                },
+                {
+                    "name": "Top Products",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/dashboard/top-products?from=2026-02-01&to=2026-02-28&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "dashboard",
+                                "top-products"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2026-02-01"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-02-28"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Order Status Distribution",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/dashboard/order-status?from=2026-02-01&to=2026-02-28",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "dashboard",
+                                "order-status"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2026-02-01"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-02-28"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Inventory Summary",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/dashboard/inventory-summary",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "dashboard",
+                                "inventory-summary"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Recent Activity",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/dashboard/recent-activity?limit=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "dashboard",
+                                "recent-activity"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "👥 12. CRM - Customers",
+            "description": "Quản lý khách hàng",
+            "item": [
+                {
+                    "name": "Get Customers",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/customers?page=1&pageSize=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "customers"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Customer by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/customers/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "customers",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "customer-uuid"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Customer",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200 || pm.response.code === 201) {",
+                                    "    var json = pm.response.json();",
+                                    "    if (json.data && json.data.id) {",
+                                    "        pm.environment.set('customerId', json.data.id);",
+                                    "    }",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"fullName\": \"Nguyễn Văn A\",\n  \"phoneNumber\": \"0901234567\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/customers",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "customers"
+                            ]
+                        },
+                        "description": "Tạo khách hàng. `customerId` tự lưu để dùng cho Feedback + Loyalty."
+                    }
+                },
+                {
+                    "name": "Update Customer",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"fullName\": \"Nguyễn Văn B\",\n  \"phoneNumber\": \"0909876543\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/customers/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "customers",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "{{customerId}}"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Customer",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/customers/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "customers",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "customer-uuid"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⭐ 13. CRM - Feedback",
+            "description": "Customer Feedback (QR Code + Staff)",
+            "item": [
+                {
+                    "name": "Public Feedback (QR) ⭐",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"storeId\": \"{{storeId}}\",\n  \"rating\": 5,\n  \"content\": \"Sản phẩm tuyệt vời, nhân viên nhiệt tình!\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/feedback/public/:orderId",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "feedback",
+                                "public",
+                                ":orderId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "orderId",
+                                    "value": "order-uuid-from-receipt"
+                                }
+                            ]
+                        },
+                        "description": "Feedback qua QR Code trên hóa đơn. KHÔNG cần auth.\n\n**Flow**: Quét QR → mở web form → chọn ⭐ → viết nhận xét → Submit\n\n⚠️ Mỗi orderId chỉ feedback 1 lần."
+                    }
+                },
+                {
+                    "name": "Staff Create Feedback",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"customerId\": \"{{customerId}}\",\n  \"content\": \"Khách rất hài lòng về dịch vụ\",\n  \"rating\": 4,\n  \"source\": \"InStore\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/feedback",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "feedback"
+                            ]
+                        },
+                        "description": "Staff nhập feedback hộ khách. Source: `InStore`, `Phone`, `Email`."
+                    }
+                },
+                {
+                    "name": "List Feedback",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/feedback?page=1&pageSize=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "feedback"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "20"
+                                },
+                                {
+                                    "key": "rating",
+                                    "value": "5",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "from",
+                                    "value": "2026-01-01",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-12-31",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "DS feedback. Filter: rating (1-5), from/to date."
+                    }
+                },
+                {
+                    "name": "Feedback Summary ⭐",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/feedback/summary",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "feedback",
+                                "summary"
+                            ]
+                        },
+                        "description": "Tổng hợp: avgRating, totalCount, distribution {1:x, 2:x, 3:x, 4:x, 5:x}."
+                    }
+                },
+                {
+                    "name": "Feedback by Customer",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/customers/{{customerId}}/feedback?page=1&pageSize=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "customers",
+                                "{{customerId}}",
+                                "feedback"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "👥 14. CRM - Loyalty",
+            "description": "Tích điểm, đổi thưởng",
+            "item": [
+                {
+                    "name": "Get Loyalty Rules",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/loyalty-rules",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "loyalty-rules"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Loyalty Rule",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Tích 1 điểm/10,000đ\",\n  \"type\": 0,\n  \"earningRate\": 1,\n  \"minSpend\": 10000,\n  \"status\": 0\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/loyalty-rules",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "loyalty-rules"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Customer Loyalty Summary",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/customers/{{customerId}}/loyalty-summary",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "customers",
+                                "{{customerId}}",
+                                "loyalty-summary"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Redeem Points",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"pointsToRedeem\": 100,\n  \"note\": \"Đổi giảm giá\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/customers/{{customerId}}/redeem",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "customers",
+                                "{{customerId}}",
+                                "redeem"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⏰ 15. HR - Employees",
+            "description": "Quản lý nhân viên",
+            "item": [
+                {
+                    "name": "Get My Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/employees/me",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "employees",
+                                "me"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update My Profile",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"fullName\": \"Nguyễn Văn A\",\n  \"phoneNumber\": \"0901234567\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/employees/me",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "employees",
+                                "me"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Upload Avatar",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": ""
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/employees/me/avatar",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "employees",
+                                "me",
+                                "avatar"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Employees",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/employees",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "employees"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Employee by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/employees/:id",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "employees",
+                                ":id"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "employee-uuid"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⏰ 16. HR - Timekeeping",
+            "description": "Chấm công GPS + Geofencing",
+            "item": [
+                {
+                    "name": "Today Status ⭐",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/timekeeping/today",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "timekeeping",
+                                "today"
+                            ]
+                        },
+                        "description": "Trạng thái hôm nay.\n\n**Response fields:**\n- `isGpsConfigured`: Store đã cài GPS chưa\n- `warning`: Nếu chưa cài GPS → thông báo cảnh báo\n- `hasCheckedIn/Out`: Đã check-in/out chưa\n- `record`: Chi tiết bản ghi chấm công"
+                    }
+                },
+                {
+                    "name": "Check-In ⭐",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"locationGps\": \"10.7780,106.7015\",\n  \"checkInImageUrl\": \"https://image-url-here\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/timekeeping/check-in",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "timekeeping",
+                                "check-in"
+                            ]
+                        },
+                        "description": "Chấm công vào.\n\n**GPS Scenarios:**\n- Store chưa GPS → ✅ OK + warning nhắc cài GPS\n- Store có GPS, ≤200m → ✅ OK\n- Store có GPS, >200m → ❌ 400 Error"
+                    }
+                },
+                {
+                    "name": "Check-Out",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"locationGps\": \"10.7780,106.7015\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/timekeeping/check-out",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "timekeeping",
+                                "check-out"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "History",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/timekeeping?from=2026-02-01&to=2026-02-28&page=1&pageSize=31",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "timekeeping"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2026-02-01"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-02-28"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "31"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Summary (Manager)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/timekeeping/summary?month=2&year=2026",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "timekeeping",
+                                "summary"
+                            ],
+                            "query": [
+                                {
+                                    "key": "month",
+                                    "value": "2"
+                                },
+                                {
+                                    "key": "year",
+                                    "value": "2026"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⏰ 17. HR - Tasks",
+            "description": "Giao việc cho nhân viên",
+            "item": [
+                {
+                    "name": "Create Task",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Dọn kho\",\n  \"description\": \"Sắp xếp lại kệ hàng\",\n  \"assignedTo\": \"employee-uuid\",\n  \"dueDate\": \"2026-02-28\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/tasks",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "tasks"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Tasks",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/tasks",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "tasks"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "My Tasks",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/tasks/me",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "tasks",
+                                "me"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Task Status",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"Completed\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/tasks/:id/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "tasks",
+                                ":id",
+                                "status"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "task-uuid"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📧 18. Email & Notifications",
+            "description": "Forgot Password, Low Stock Alert, Subscription Expiry notifications",
+            "item": [
+                {
+                    "name": "Forgot Password ⭐",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"lanhuong8899z@gmail.com\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/forgot-password",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "forgot-password"
+                            ]
+                        },
+                        "description": "Gửi mã reset 6 số qua email. Luôn trả 200 OK (chống email enumeration).\n\n📧 Email chứa mã 6 số, có hiệu lực 15 phút."
+                    }
+                },
+                {
+                    "name": "Reset Password ⭐",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"lanhuong8899z@gmail.com\",\n  \"code\": \"123456\",\n  \"newPassword\": \"NewPassword@123\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/reset-password",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "reset-password"
+                            ]
+                        },
+                        "description": "Đặt lại mật khẩu bằng mã 6 số từ email.\n\n⚠️ Thay `code` bằng mã thật nhận từ email Forgot Password."
+                    }
+                },
+                {
+                    "name": "Low Stock Check 📦",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/sales/notifications/low-stock-check?threshold=5",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sales",
+                                "notifications",
+                                "low-stock-check"
+                            ],
+                            "query": [
+                                {
+                                    "key": "threshold",
+                                    "value": "5"
+                                }
+                            ]
+                        },
+                        "description": "Kiểm tra sản phẩm có stock ≤ threshold và gửi email cảnh báo cho chủ store.\n\n📧 Email chứa danh sách sản phẩm sắp hết/hết hàng.\n\nRoles: StoreOwner, Manager"
+                    }
+                },
+                {
+                    "name": "Check Expiring Subscriptions ⏰",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/subscriptions/check-expiry?days=7",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "subscriptions",
+                                "check-expiry"
+                            ],
+                            "query": [
+                                {
+                                    "key": "days",
+                                    "value": "7"
+                                }
+                            ]
+                        },
+                        "description": "SuperAdmin: Kiểm tra tất cả subscription sắp hết hạn trong N ngày tới và gửi email cảnh báo.\n\n📧 Email cho mỗi store owner có subscription sắp hết hạn."
+                    }
+                },
+                {
+                    "name": "My Subscription Expiry",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/subscriptions/my-expiry",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "subscriptions",
+                                "my-expiry"
+                            ]
+                        },
+                        "description": "StoreOwner: Xem trạng thái subscription hiện tại, ngày hết hạn, số ngày còn lại."
+                    }
+                }
+            ]
+        }
+    ]
+}

@@ -37,6 +37,12 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
       - ServiceUrls__HrService=http://hr-api:8080
       - ServiceUrls__SaasService=http://saas-api:8080
+      - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID}
+      - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET}
+      - InternalApi__Key=360retail-internal-secret-key-2026
+      # Resend (Email Service)
+      - Resend__ApiKey=${RESEND_API_KEY}
+      - Resend__FromEmail=${RESEND_FROM_EMAIL}
     ports:
       - "5297:8080"
     depends_on:
@@ -53,6 +59,16 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__SaasDb=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
       - ServiceUrls__IdentityService=http://identity-api:8080
+      - InternalApi__Key=360retail-internal-secret-key-2026
+      # Resend (Email Service)
+      - Resend__ApiKey=${RESEND_API_KEY}
+      - Resend__FromEmail=${RESEND_FROM_EMAIL}
+      # SePay (Bank Transfer Payment)
+      - SePay__MerchantId=SP-LIVE-TH362793
+      - SePay__SecretKey=spsk_live_1GyhEpBx8kXmgKixUVxJGRUhjr3EmXH4
+      - SePay__BankName=MBBank
+      - SePay__AccountNumber=0917213712
+      - SePay__AccountName=TRAN HOANG TUAN MINH
     ports:
       - "5031:8080"
     depends_on:
@@ -72,6 +88,11 @@ services:
       - Cloudinary__CloudName=${CLOUDINARY_CLOUD_NAME}
       - Cloudinary__ApiKey=${CLOUDINARY_API_KEY}
       - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET}
+      - ServiceUrls__CrmService=http://crm-api:8080
+      - InternalApi__Key=360retail-internal-secret-key-2026
+      # Resend (Email Service)
+      - Resend__ApiKey=${RESEND_API_KEY}
+      - Resend__FromEmail=${RESEND_FROM_EMAIL}
     ports:
       - "5091:8080"
     depends_on:
@@ -88,6 +109,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
       - ServiceUrls__IdentityService=http://identity-api:8080
+      - InternalApi__Key=360retail-internal-secret-key-2026
       - JwtSettings__Key=THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL
       - JwtSettings__Issuer=360Retail_Identity
       - JwtSettings__Audience=360Retail_Users
@@ -111,8 +133,15 @@ services:
     container_name: 360retail-crm-api
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
+      - JwtSettings__Key=THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL
+      - JwtSettings__Issuer=360Retail_Identity
+      - JwtSettings__Audience=360Retail_Users
+      - InternalApi__Key=360retail-internal-secret-key-2026
     ports:
       - "5169:8080"
+    depends_on:
+      - postgres
     networks:
       - 360retail-network
 

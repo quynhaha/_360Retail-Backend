@@ -1,5 +1,6 @@
 using _360Retail.Services.HR.Application.Interfaces;
 using _360Retail.Shared.Common.Middleware;
+using _360Retail.Shared.Email;
 using _360Retail.Services.HR.Infrastructure.Persistence;
 using _360Retail.Services.HR.Infrastructure.Services;
 using _360Retail.Services.HR.Infrastructure.Services.Email;
@@ -23,6 +24,10 @@ builder.Services.AddHttpClient("IdentityService", client =>
 {
     var baseUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5297";
     client.BaseAddress = new Uri(baseUrl);
+
+    // Add internal API key for cross-service authentication
+    var internalKey = builder.Configuration["InternalApi:Key"] ?? "360retail-internal-secret-key";
+    client.DefaultRequestHeaders.Add("X-Internal-Key", internalKey);
 });
 #endregion
 
@@ -30,7 +35,9 @@ builder.Services.AddHttpClient("IdentityService", client =>
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IStorageService, CloudinaryStorageService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
-builder.Services.AddHttpClient<IEmailService, ResendEmailService>();
+builder.Services.AddScoped<ITimekeepingService, TimekeepingService>();
+builder.Services.AddSharedEmailServices();
+builder.Services.AddScoped<IEmailService, ResendEmailService>();
 #endregion
 
 #region ===== JWT AUTHENTICATION =====
@@ -116,6 +123,9 @@ var app = builder.Build();
 #region ===== MIDDLEWARE =====
 // Global Exception Handler - must be first
 app.UseGlobalExceptionHandler();
+
+// Protect internal APIs with shared key
+app.UseInternalApiKeyProtection();
 
 if (app.Environment.IsDevelopment())
 {

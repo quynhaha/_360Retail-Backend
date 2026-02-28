@@ -1,18 +1,24 @@
 using _360Retail.Services.Sales.Application.DTOs;
 using _360Retail.Services.Sales.Application.Interfaces;
 using _360Retail.Services.Sales.Domain.Entities;
+using _360Retail.Services.Sales.Infrastructure.HttpClients;
 using _360Retail.Services.Sales.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace _360Retail.Services.Sales.Infrastructure.Services;
 
 public class OrderService : IOrderService
 {
     private readonly SalesDbContext _db;
+    private readonly ICrmClient _crmClient;
+    private readonly ILogger<OrderService> _logger;
 
-    public OrderService(SalesDbContext db)
+    public OrderService(SalesDbContext db, ICrmClient crmClient, ILogger<OrderService> logger)
     {
         _db = db;
+        _crmClient = crmClient;
+        _logger = logger;
     }
 
     private class IdWrapper { public Guid Id { get; set; } }
@@ -135,7 +141,23 @@ public class OrderService : IOrderService
 
         _db.Orders.Add(order);
         await _db.SaveChangesAsync();
-        
+
+        // Auto-earn loyalty points (fire-and-forget, won't fail the order)
+        if (order.CustomerId.HasValue)
+        {
+            try
+            {
+                var totalQty = order.OrderItems.Sum(x => x.Quantity);
+                await _crmClient.EarnPointsFromOrderAsync(
+                    storeId, order.CustomerId.Value,
+                    order.Id, order.TotalAmount, totalQty);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to earn loyalty points for Order {OrderId}", order.Id);
+            }
+        }
+
         return order.Id;
     }
 
@@ -256,13 +278,71 @@ public class OrderService : IOrderService
          };
     }
     
+    // Valid status transitions
+    private static readonly Dictionary<string, string[]> ValidTransitions = new()
+    {
+        { "Pending", new[] { "Completed", "Cancelled" } },
+        { "Completed", new[] { "Cancelled" } },
+        { "Cancelled", Array.Empty<string>() }
+    };
+
     public async Task UpdateStatusAsync(Guid id, Guid storeId, string status)
     {
          var order = await _db.Orders.FirstOrDefaultAsync(o => o.Id == id && o.StoreId == storeId);
          if (order == null) throw new Exception("Order not found");
-         
+
+         // Validate transition
+         if (ValidTransitions.TryGetValue(order.Status ?? "Pending", out var allowed))
+         {
+             if (!allowed.Contains(status))
+                 throw new Exception($"Cannot change status from '{order.Status}' to '{status}'");
+         }
+
+         // If cancelling, use CancelOrderAsync instead
+         if (status == "Cancelled")
+         {
+             await CancelOrderAsync(id, storeId);
+             return;
+         }
+
          order.Status = status;
          await _db.SaveChangesAsync();
+    }
+
+    public async Task CancelOrderAsync(Guid id, Guid storeId)
+    {
+        var order = await _db.Orders
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.ProductVariant)
+            .FirstOrDefaultAsync(o => o.Id == id && o.StoreId == storeId);
+
+        if (order == null)
+            throw new Exception("Order not found");
+
+        if (order.Status == "Cancelled")
+            throw new Exception("Order is already cancelled");
+
+        // Restore stock for each item
+        foreach (var item in order.OrderItems)
+        {
+            if (item.ProductVariantId.HasValue && item.ProductVariant != null)
+            {
+                // Restore variant stock
+                item.ProductVariant.StockQuantity += item.Quantity;
+            }
+            else if (item.Product != null)
+            {
+                // Restore base product stock
+                item.Product.StockQuantity += item.Quantity;
+            }
+        }
+
+        order.Status = "Cancelled";
+        order.PaymentStatus = "Refunded";
+
+        await _db.SaveChangesAsync();
     }
     
     private string GenerateOrderCode()

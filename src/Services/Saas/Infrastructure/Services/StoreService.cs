@@ -185,6 +185,17 @@ public class StoreService : IStoreService
         if (dto.IsActive.HasValue)
             store.IsActive = dto.IsActive.Value;
 
+        // GPS coordinates — must provide both or neither
+        if (dto.Latitude.HasValue && dto.Longitude.HasValue)
+        {
+            store.Latitude = dto.Latitude.Value;
+            store.Longitude = dto.Longitude.Value;
+        }
+        else if (dto.Latitude.HasValue || dto.Longitude.HasValue)
+        {
+            throw new Exception("Phải cung cấp cả latitude và longitude cùng lúc");
+        }
+
         await _db.SaveChangesAsync();
         return true;
     }
@@ -208,6 +219,8 @@ public class StoreService : IStoreService
             StoreName = s.StoreName,
             Address = s.Address,
             Phone = s.Phone,
+            Latitude = s.Latitude,
+            Longitude = s.Longitude,
             IsActive = s.IsActive,
             CreatedAt = s.CreatedAt
         };

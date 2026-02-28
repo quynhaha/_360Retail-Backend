@@ -4,6 +4,7 @@ using _360Retail.Services.Sales.Domain.Entities;
 using _360Retail.Services.Sales.Infrastructure.Persistence;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace _360Retail.Services.Sales.Infrastructure.Services
 {
@@ -12,12 +13,14 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
         private readonly SalesDbContext _context;
         private readonly IMapper _mapper;
         private readonly IStorageService _storageService;
+        private readonly ILogger<ProductService> _logger;
 
-        public ProductService(SalesDbContext context, IMapper mapper, IStorageService storageService)
+        public ProductService(SalesDbContext context, IMapper mapper, IStorageService storageService, ILogger<ProductService> logger)
         {
             _context = context;
             _mapper = mapper;
             _storageService = storageService;
+            _logger = logger;
         }
 
         public async Task<Guid> CreateAsync(CreateProductDto request, Guid storeId)
@@ -25,16 +28,8 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
             // Parse variants từ JSON string
             var variantDtos = request.GetVariants();
             
-            // DEBUG: Log số lượng variants nhận được từ request
-            Console.WriteLine($"[DEBUG] CreateAsync - VariantsJson: {request.VariantsJson ?? "(null)"}");
-            Console.WriteLine($"[DEBUG] CreateAsync - Parsed {variantDtos.Count} variants for product: {request.ProductName}");
-            if (variantDtos.Count > 0)
-            {
-                foreach (var v in variantDtos)
-                {
-                    Console.WriteLine($"[DEBUG] Request Variant: SKU={v.Sku}, Size={v.Size}, Color={v.Color}, StockQty={v.StockQuantity}");
-                }
-            }
+            _logger.LogDebug("CreateAsync - VariantsJson: {VariantsJson}, Parsed {Count} variants for product: {ProductName}",
+                request.VariantsJson ?? "(null)", variantDtos.Count, request.ProductName);
 
             // 1. Check Category thuộc Store
             var categoryExists = await _context.Categories.AnyAsync(c =>
@@ -85,16 +80,16 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                     StockQuantity = vDto.StockQuantity
                 };
                 product.ProductVariants.Add(variant);
-                Console.WriteLine($"[DEBUG] Created Variant: Id={variant.Id}, SKU={variant.Sku}, Size={variant.Size}, Color={variant.Color}");
+                _logger.LogDebug("Created Variant: Id={VariantId}, SKU={Sku}, Size={Size}, Color={Color}", variant.Id, variant.Sku, variant.Size, variant.Color);
             }
 
-            Console.WriteLine($"[DEBUG] Total ProductVariants to save: {product.ProductVariants.Count}");
+            _logger.LogDebug("Total ProductVariants to save: {Count}", product.ProductVariants.Count);
 
             // 6. Lưu DB
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
             
-            Console.WriteLine($"[DEBUG] Product saved successfully with Id: {product.Id}");
+            _logger.LogDebug("Product saved successfully with Id: {ProductId}", product.Id);
             return product.Id;
         }
 

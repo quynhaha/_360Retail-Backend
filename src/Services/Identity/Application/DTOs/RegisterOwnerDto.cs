@@ -9,5 +9,10 @@ public record RegisterUserDto(
 
     [Required(ErrorMessage = "Mật khẩu là bắt buộc")]
     [StringLength(100, MinimumLength = 8, ErrorMessage = "Mật khẩu phải từ 8-100 ký tự")]
-    string Password
+    string Password,
+
+    string? FullName = null,
+
+    [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
+    string? PhoneNumber = null
 );
