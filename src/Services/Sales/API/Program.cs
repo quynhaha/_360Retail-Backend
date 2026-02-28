@@ -37,6 +37,7 @@ builder.Services.AddCors(options =>
 // Add services
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
 builder.Services.AddSwaggerGen(option =>
 {
     option.SwaggerDoc("v1", new OpenApiInfo { Title = "Sales API", Version = "v1" });
@@ -154,6 +155,7 @@ app.MapGet("/weatherforecast", () =>
 .WithName("GetWeatherForecast")
 .WithOpenApi();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)

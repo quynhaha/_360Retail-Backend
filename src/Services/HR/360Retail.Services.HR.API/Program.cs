@@ -104,6 +104,7 @@ builder.Services.AddSwaggerGen(option =>
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -143,6 +144,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 #endregion
 
 app.Run();
