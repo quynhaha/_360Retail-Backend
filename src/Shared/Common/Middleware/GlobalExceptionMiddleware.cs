@@ -47,11 +47,13 @@ public class GlobalExceptionMiddleware
             
             ArgumentException aex => (400, ApiErrorResponse.FromException(aex.Message, "INVALID_ARGUMENT")),
             
-            UnauthorizedAccessException => (401, ApiErrorResponse.FromException("Unauthorized", "UNAUTHORIZED")),
+            UnauthorizedAccessException uex => (401, ApiErrorResponse.FromException(uex.Message, "UNAUTHORIZED")),
             
             KeyNotFoundException knf => (404, ApiErrorResponse.FromException(knf.Message, "NOT_FOUND")),
+
+            InvalidOperationException iex => (409, ApiErrorResponse.FromException(iex.Message, "CONFLICT")),
             
-            // Generic exceptions - log and return clean message
+            // Generic exceptions - try to infer status code from message
             _ => HandleGenericException(exception)
         };
 
