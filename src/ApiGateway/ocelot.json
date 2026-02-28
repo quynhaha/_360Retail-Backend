@@ -1,6 +1,21 @@
 {
   "Routes": [
     {
+      "UpstreamPathTemplate": "/notifications/hub/{everything}",
+      "UpstreamHttpMethod": [
+        "Get",
+        "Post"
+      ],
+      "DownstreamPathTemplate": "/notifications/hub/{everything}",
+      "DownstreamScheme": "ws",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "identity-api",
+          "Port": 8080
+        }
+      ]
+    },
+    {
       "SwaggerKey": "identity",
       "UpstreamPathTemplate": "/identity/{everything}",
       "UpstreamHttpMethod": [

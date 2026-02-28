@@ -12,6 +12,7 @@ public partial class IdentityDbContext : DbContext
     public DbSet<AppUser> AppUsers => Set<AppUser>();
     public DbSet<AppRole> AppRoles => Set<AppRole>();
     public DbSet<UserStoreAccess> UserStoreAccess => Set<UserStoreAccess>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -123,6 +124,47 @@ public partial class IdentityDbContext : DbContext
                 .WithMany(u => u.StoreAccesses)
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ----------------- NOTIFICATION -----------------
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("notifications", "identity");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id)
+                .HasColumnName("id")
+                .HasDefaultValueSql("uuid_generate_v4()");
+
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.StoreId).HasColumnName("store_id");
+
+            entity.Property(e => e.Title)
+                .HasColumnName("title")
+                .HasMaxLength(200);
+
+            entity.Property(e => e.Message)
+                .HasColumnName("message");
+
+            entity.Property(e => e.Type)
+                .HasColumnName("type")
+                .HasMaxLength(50);
+
+            entity.Property(e => e.Link)
+                .HasColumnName("link")
+                .HasMaxLength(500);
+
+            entity.Property(e => e.IsRead)
+                .HasColumnName("is_read")
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.CreatedAt)
+                .HasColumnName("created_at")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasIndex(e => new { e.UserId, e.IsRead, e.CreatedAt })
+                .HasDatabaseName("idx_notifications_user")
+                .IsDescending(false, false, true);
         });
     }
 }

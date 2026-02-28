@@ -1,4 +1,5 @@
 ﻿using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Services.Identity.API.Hubs;
 using _360Retail.Shared.Common.Middleware;
 using _360Retail.Shared.Email;
 using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
@@ -9,6 +10,7 @@ using _360Retail.Services.Identity.Infrastructure.Services.Email;
 using _360Retail.Services.Identity.Infrastructure.Services.Invitations;
 using _360Retail.Services.Identity.Infrastructure.Services.SuperAdmin;
 using _360Retail.Services.Identity.Infrastructure.Services.UserStoreAccess;
+using _360Retail.Services.Identity.API.Services;
 using _360Retail.Services.Saas.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -93,6 +95,10 @@ builder.Services.AddScoped<ISuperAdminUserService, SuperAdminUserService>();
 builder.Services.AddScoped<IUserInvitationService, UserInvitationService>();
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 builder.Services.AddScoped<IUserStoreAccessService, UserStoreAccessService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+
+// ===== SIGNALR =====
+builder.Services.AddSignalR();
 
 #endregion
 
@@ -118,6 +124,23 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         ClockSkew = TimeSpan.Zero
+    };
+
+    // Support SignalR: read JWT from query string for WebSocket connections
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notifications/hub"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
     };
 });
 #endregion
@@ -204,6 +227,7 @@ app.UseMiddleware<_360Retail.Services.Identity.API.Middleware.TokenBlacklistMidd
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/notifications/hub");
 app.MapHealthChecks("/health");
 #endregion
 

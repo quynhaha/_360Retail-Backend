@@ -629,3 +629,19 @@ ADD COLUMN IF NOT EXISTS password_reset_expiry TIMESTAMPTZ;
 ALTER TABLE identity.app_users
 ADD COLUMN IF NOT EXISTS email_verification_code VARCHAR(6),
 ADD COLUMN IF NOT EXISTS email_verification_expiry TIMESTAMPTZ;
+
+-- 28/02/2026: In-App Notification System
+CREATE TABLE IF NOT EXISTS identity.notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES identity.app_users(id) ON DELETE CASCADE,
+    store_id UUID,
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    link VARCHAR(500),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user
+ON identity.notifications(user_id, is_read, created_at DESC);
