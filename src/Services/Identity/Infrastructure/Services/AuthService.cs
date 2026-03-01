@@ -92,9 +92,12 @@ public class AuthService : IAuthService
 
         // Remove any unverified registration with same email (allow re-register)
         var existingUnverified = await _db.AppUsers
+            .Include(u => u.Roles)
             .FirstOrDefaultAsync(u => u.Email == dto.Email && !u.IsActivated);
         if (existingUnverified != null)
         {
+            // Clear roles first to avoid FK constraint on user_roles join table
+            existingUnverified.Roles.Clear();
             _db.AppUsers.Remove(existingUnverified);
             await _db.SaveChangesAsync();
         }
