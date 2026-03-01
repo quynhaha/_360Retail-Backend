@@ -230,6 +230,7 @@ public class AuthService : IAuthService
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim("id", user.Id.ToString()), // For consistency with BaseApiController
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim("full_name", user.UserName ?? user.Email),
             new Claim("status", user.Status)
         };
 
@@ -610,7 +611,7 @@ public class AuthService : IAuthService
             existingUser = new AppUser
             {
                 Email = userInfo.Email,
-                UserName = userInfo.Email,
+                UserName = userInfo.Name ?? userInfo.Email,
                 AuthProvider = dto.Provider,
                 ExternalUserId = userInfo.Sub,
                 ProfilePictureUrl = userInfo.Picture,
