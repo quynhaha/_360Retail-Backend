@@ -39,7 +39,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
             // 1. Kiểm tra trùng tên trong cùng store
             bool exists = await _context.Categories.AnyAsync(c => c.StoreId == storeId
                 && c.CategoryName == request.CategoryName);
-            if (exists) throw new Exception("Category name already exists!");
+            if (exists) throw new Exception("Tên danh mục đã tồn tại");
 
             // 2. Map và Lưu
             var category = _mapper.Map<Category>(request);
@@ -57,7 +57,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
             // Validate store ownership
             var category = await _context.Categories
                 .FirstOrDefaultAsync(c => c.Id == request.Id && c.StoreId == storeId);
-            if (category == null) throw new Exception("Category not found!");
+            if (category == null) throw new Exception("Không tìm thấy danh mục");
 
             // PARTIAL UPDATE: Only update fields that are provided (not null or empty)
             
@@ -70,7 +70,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                     bool exists = await _context.Categories.AnyAsync(c => 
                         c.StoreId == storeId && 
                         c.CategoryName == request.CategoryName);
-                    if (exists) throw new Exception("Category name already exists!");
+                    if (exists) throw new Exception("Tên danh mục đã tồn tại");
                 }
                 category.CategoryName = request.CategoryName;
             }
@@ -97,15 +97,15 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
             // Validate store ownership
             var category = await _context.Categories
                 .FirstOrDefaultAsync(c => c.Id == id && c.StoreId == storeId);
-            if (category == null) throw new Exception("Category not found!");
+            if (category == null) throw new Exception("Không tìm thấy danh mục");
 
             //  Không được xóa nếu đang có danh mục con
             bool hasChildren = await _context.Categories.AnyAsync(c => c.ParentId == id);
-            if (hasChildren) throw new Exception("Subcategories must be deleted first!");
+            if (hasChildren) throw new Exception("Vui lòng xóa danh mục con trước");
 
             //  Không được xóa nếu đang có sản phẩm (Optional)
             bool hasProducts = await _context.Products.AnyAsync(p => p.CategoryId == id);
-            if (hasProducts) throw new Exception("The category contains the product, it cannot be deleted!");
+            if (hasProducts) throw new Exception("Danh mục chứa sản phẩm, không thể xóa");
 
             // soft delete
             category.IsActive = false;

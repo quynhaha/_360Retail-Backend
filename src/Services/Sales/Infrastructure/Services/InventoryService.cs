@@ -22,10 +22,10 @@ public class InventoryService : IInventoryService
     {
         // Validate type
         if (dto.Type != "Import" && dto.Type != "Export")
-            throw new Exception("Type must be 'Import' or 'Export'");
+            throw new Exception("Loại phiếu phải là 'Import' hoặc 'Export'");
 
         if (dto.Items == null || dto.Items.Count == 0)
-            throw new Exception("Ticket must have at least one item");
+            throw new Exception("Phiếu kho phải có ít nhất một sản phẩm");
 
         // Resolve EmployeeId from UserId
         var employeeWrapper = await _db.Database
@@ -42,7 +42,7 @@ public class InventoryService : IInventoryService
             .ToListAsync();
 
         if (products.Count != productIds.Count)
-            throw new Exception("Some products were not found or do not belong to this store");
+            throw new Exception("Một số sản phẩm không tìm thấy hoặc không thuộc cửa hàng");
 
         // Build ticket
         var ticket = new InventoryTicket
@@ -63,7 +63,7 @@ public class InventoryService : IInventoryService
         foreach (var itemDto in dto.Items)
         {
             if (itemDto.Quantity <= 0)
-                throw new Exception("Quantity must be greater than 0");
+                throw new Exception("Số lượng phải lớn hơn 0");
 
             var product = products.First(p => p.Id == itemDto.ProductId);
 
@@ -73,7 +73,7 @@ public class InventoryService : IInventoryService
                 var variant = product.ProductVariants
                     .FirstOrDefault(v => v.Id == itemDto.ProductVariantId.Value);
                 if (variant == null)
-                    throw new Exception($"Variant not found for product '{product.ProductName}'");
+                    throw new Exception($"Không tìm thấy biến thể của sản phẩm '{product.ProductName}'");
             }
 
             var ticketItem = new InventoryTicketItem
@@ -105,10 +105,10 @@ public class InventoryService : IInventoryService
             .FirstOrDefaultAsync(t => t.Id == ticketId && t.StoreId == storeId);
 
         if (ticket == null)
-            throw new Exception("Inventory ticket not found");
+            throw new Exception("Không tìm thấy phiếu kho");
 
         if (ticket.Status != "Draft")
-            throw new Exception($"Cannot confirm ticket with status '{ticket.Status}'. Only Draft tickets can be confirmed.");
+            throw new Exception($"Không thể xác nhận phiếu có trạng thái '{ticket.Status}'. Chỉ phiếu Nháp mới được xác nhận.");
 
         // Resolve confirmer EmployeeId
         var employeeWrapper = await _db.Database
@@ -138,7 +138,7 @@ public class InventoryService : IInventoryService
                 else // Export
                 {
                     if (variant.StockQuantity < item.Quantity)
-                        throw new Exception($"Insufficient stock for product '{product.ProductName}' (Variant: {variant.Sku}). Available: {variant.StockQuantity}");
+                        throw new Exception($"Không đủ tồn kho cho sản phẩm '{product.ProductName}' (Biến thể: {variant.Sku}). Còn lại: {variant.StockQuantity}");
                     variant.StockQuantity -= item.Quantity;
                 }
             }
@@ -150,7 +150,7 @@ public class InventoryService : IInventoryService
                 else // Export
                 {
                     if (product.StockQuantity < item.Quantity)
-                        throw new Exception($"Insufficient stock for product '{product.ProductName}'. Available: {product.StockQuantity}");
+                        throw new Exception($"Không đủ tồn kho cho sản phẩm '{product.ProductName}'. Còn lại: {product.StockQuantity}");
                     product.StockQuantity -= item.Quantity;
                 }
             }
@@ -169,10 +169,10 @@ public class InventoryService : IInventoryService
             .FirstOrDefaultAsync(t => t.Id == ticketId && t.StoreId == storeId);
 
         if (ticket == null)
-            throw new Exception("Inventory ticket not found");
+            throw new Exception("Không tìm thấy phiếu kho");
 
         if (ticket.Status != "Draft")
-            throw new Exception($"Cannot cancel ticket with status '{ticket.Status}'. Only Draft tickets can be cancelled.");
+            throw new Exception($"Không thể hủy phiếu có trạng thái '{ticket.Status}'. Chỉ phiếu Nháp mới được hủy.");
 
         ticket.Status = "Cancelled";
         await _db.SaveChangesAsync();
@@ -185,10 +185,10 @@ public class InventoryService : IInventoryService
             .FirstOrDefaultAsync(t => t.Id == ticketId && t.StoreId == storeId);
 
         if (ticket == null)
-            throw new Exception("Inventory ticket not found");
+            throw new Exception("Không tìm thấy phiếu kho");
 
         if (ticket.Status == "Confirmed")
-            throw new Exception("Cannot delete a confirmed ticket. Stock has already been updated.");
+            throw new Exception("Không thể xóa phiếu đã xác nhận. Tồn kho đã được cập nhật.");
 
         ticket.IsDeleted = true;
         await _db.SaveChangesAsync();

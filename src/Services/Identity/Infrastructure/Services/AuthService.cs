@@ -2,6 +2,7 @@
 using _360Retail.Services.Identity.Application.Interfaces;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
+using _360Retail.Shared.Common.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -60,7 +61,7 @@ public class AuthService : IAuthService
             );
 
         if (user == null)
-            throw new UnauthorizedAccessException("Invalid email or password");
+            throw new UnauthorizedAccessException("Email hoặc mật khẩu không chính xác");
 
         var verifyResult = _passwordHasher.VerifyHashedPassword(
             user,
@@ -69,7 +70,7 @@ public class AuthService : IAuthService
         );
 
         if (verifyResult == PasswordVerificationResult.Failed)
-            throw new UnauthorizedAccessException("Invalid email or password");
+            throw new UnauthorizedAccessException("Email hoặc mật khẩu không chính xác");
 
         var token = await GenerateJwtTokenAsync(user);
         var expireMinutes = GetJwtExpireMinutes();
@@ -87,7 +88,7 @@ public class AuthService : IAuthService
     public async Task RegisterAsync(RegisterUserDto dto)
     {
         if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email && u.IsActivated))
-            throw new Exception("Email already exists");
+            throw BusinessException.Duplicate("Email", dto.Email);
 
         // Remove any unverified registration with same email (allow re-register)
         var existingUnverified = await _db.AppUsers
@@ -178,7 +179,7 @@ public class AuthService : IAuthService
             .FirstOrDefaultAsync(u => u.Id == userId && u.IsActivated == true);
 
         if (user == null)
-            throw new Exception("User not found or inactive");
+            throw new BusinessException("Không tìm thấy người dùng hoặc tài khoản không hoạt động", "NOT_FOUND", 404);
 
         // If user wants to switch store
         if (storeId.HasValue)
@@ -186,12 +187,12 @@ public class AuthService : IAuthService
             // Verify access
             var targetAccess = user.StoreAccesses.FirstOrDefault(x => x.StoreId == storeId.Value);
             if (targetAccess == null)
-                throw new Exception("Access denied to this store");
+                throw BusinessException.Forbidden("Bạn không có quyền truy cập cửa hàng này");
 
             // Check if store is active (paid) by calling SaaS service
             var isStoreActive = await CheckStoreActiveAsync(storeId.Value);
             if (!isStoreActive)
-                throw new Exception("Store is not active. Please complete payment to access this store.");
+                throw BusinessException.Forbidden("Cửa hàng chưa được kích hoạt. Vui lòng hoàn tất thanh toán.");
 
             // Update IsDefault in DB for next logins
             foreach (var access in user.StoreAccesses) access.IsDefault = false;
@@ -389,7 +390,7 @@ public class AuthService : IAuthService
             .FirstOrDefaultAsync(u => u.Id == userId && u.IsActivated);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw BusinessException.NotFound("User", userId);
 
         //Verify current password
         var verifyResult = _passwordHasher.VerifyHashedPassword(
@@ -399,11 +400,11 @@ public class AuthService : IAuthService
         );
 
         if (verifyResult == PasswordVerificationResult.Failed)
-            throw new Exception("Current password is incorrect");
+            throw BusinessException.ValidationFailed("Mật khẩu hiện tại không chính xác");
 
         //Validate new password
         if (dto.NewPassword != dto.ConfirmNewPassword)
-            throw new Exception("Password confirmation does not match");
+            throw BusinessException.ValidationFailed("Xác nhận mật khẩu không khớp");
 
         // (Optional) tránh đổi lại mật khẩu cũ
         if (_passwordHasher.VerifyHashedPassword(
@@ -412,7 +413,7 @@ public class AuthService : IAuthService
                 dto.NewPassword
             ) == PasswordVerificationResult.Success)
         {
-            throw new Exception("New password must be different from old password");
+            throw BusinessException.ValidationFailed("Mật khẩu mới phải khác mật khẩu cũ");
         }
 
         //Update password + clear flag
@@ -430,14 +431,14 @@ public class AuthService : IAuthService
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw BusinessException.NotFound("User", userId);
 
         // Check if user already has trial or active subscription
         if (user.TrialStartDate.HasValue)
-            throw new Exception("Trial already started");
+            throw BusinessException.ValidationFailed("Bạn đã bắt đầu dùng thử rồi");
 
         if (user.StoreAccesses.Any())
-            throw new Exception("User already has store access");
+            throw BusinessException.ValidationFailed("Người dùng đã có quyền truy cập cửa hàng");
 
         // Set trial period (7 days)
         user.TrialStartDate = DateTime.UtcNow;
@@ -457,13 +458,13 @@ public class AuthService : IAuthService
         if (!response.IsSuccessStatusCode)
         {
             var error = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Failed to create trial store: {error}");
+            throw new Exception($"Tạo cửa hàng dùng thử thất bại: {error}");
         }
 
         var storeResult = await response.Content.ReadFromJsonAsync<CreateTrialStoreResponse>();
         
         if (storeResult == null)
-            throw new Exception("Invalid response from SaaS service");
+            throw new Exception("Phản hồi không hợp lệ từ dịch vụ SaaS");
 
         // Link user to store
         _db.UserStoreAccess.Add(new Domain.Entities.UserStoreAccess
@@ -521,7 +522,7 @@ public class AuthService : IAuthService
             .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw BusinessException.NotFound("User", userId);
 
         var defaultStore = user.StoreAccesses.FirstOrDefault(x => x.IsDefault);
         
@@ -556,7 +557,7 @@ public class AuthService : IAuthService
     public async Task<ExternalAuthResultDto> ExternalLoginAsync(ExternalLoginDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Provider) || string.IsNullOrWhiteSpace(dto.IdToken))
-            throw new Exception("Provider and IdToken are required");
+            throw BusinessException.ValidationFailed("Provider và IdToken là bắt buộc");
 
         // Validate token based on provider
         GoogleUserInfo? userInfo = null;
@@ -567,11 +568,11 @@ public class AuthService : IAuthService
         }
         else
         {
-            throw new Exception($"Unsupported provider: {dto.Provider}");
+            throw BusinessException.ValidationFailed($"Provider phải là Google hoặc Facebook");
         }
 
         if (userInfo == null || string.IsNullOrEmpty(userInfo.Email))
-            throw new Exception("Failed to validate token or retrieve user info");
+            throw BusinessException.ValidationFailed("Xác thực token thất bại hoặc không lấy được thông tin");
 
         // Find existing user by external ID or email
         var existingUser = await _db.AppUsers
@@ -670,19 +671,19 @@ public class AuthService : IAuthService
             
             if (string.IsNullOrEmpty(expectedClientId))
             {
-                throw new Exception("Google OAuth Client ID not configured");
+                throw new Exception("Chưa cấu hình Google OAuth Client ID");
             }
             
             if (tokenInfo?.Aud != expectedClientId)
             {
-                throw new Exception("Token was not issued for this application");
+                throw BusinessException.ValidationFailed("Token không thuộc ứng dụng này");
             }
 
             return tokenInfo;
         }
         catch (Exception ex)
         {
-            throw new Exception($"Failed to validate Google token: {ex.Message}");
+            throw new Exception($"Xác thực Google token thất bại: {ex.Message}");
         }
     }
 
@@ -732,13 +733,13 @@ public class AuthService : IAuthService
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Email == email && u.IsActivated);
         
         if (user == null)
-            throw new Exception("Invalid email");
+            throw BusinessException.ValidationFailed("Email không hợp lệ");
 
         if (string.IsNullOrEmpty(user.PasswordResetCode) || user.PasswordResetCode != resetCode)
-            throw new Exception("Invalid reset code");
+            throw BusinessException.ValidationFailed("Mã đặt lại không chính xác");
 
         if (user.PasswordResetExpiry == null || user.PasswordResetExpiry < DateTime.UtcNow)
-            throw new Exception("Reset code has expired. Please request a new one");
+            throw BusinessException.ValidationFailed("Mã đặt lại đã hết hạn. Vui lòng yêu cầu mã mới");
 
         // Update password
         user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
@@ -757,13 +758,13 @@ public class AuthService : IAuthService
             .FirstOrDefaultAsync(u => u.Email == email && !u.IsActivated);
 
         if (user == null)
-            throw new Exception("Email không tồn tại hoặc đã được xác nhận");
+            throw BusinessException.ValidationFailed("Email không tồn tại hoặc đã được xác nhận");
 
         if (string.IsNullOrEmpty(user.EmailVerificationCode) || user.EmailVerificationCode != otpCode)
-            throw new Exception("Mã OTP không chính xác");
+            throw BusinessException.ValidationFailed("Mã OTP không chính xác");
 
         if (user.EmailVerificationExpiry == null || user.EmailVerificationExpiry < DateTime.UtcNow)
-            throw new Exception("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại");
+            throw BusinessException.ValidationFailed("Mã OTP đã hết hạn. Vui lòng yêu cầu gửi lại");
 
         // Activate the account
         user.IsActivated = true;

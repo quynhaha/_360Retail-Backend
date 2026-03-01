@@ -39,11 +39,11 @@ public class UserInvitationService : IUserInvitationService
     public async Task InviteUserAsync(InviteUserDto dto)
     {
         if (_db.AppUsers.Any(u => u.Email == dto.Email))
-            throw new Exception("Email already exists");
+            throw new Exception("Email đã tồn tại");
 
         var role = _db.AppRoles.FirstOrDefault(r => r.RoleName == dto.Role);
         if (role == null)
-            throw new Exception($"Role '{dto.Role}' not found");
+            throw new Exception($"Không tìm thấy vai trò '{dto.Role}'");
 
         var tempPassword = GenerateTempPassword();
 

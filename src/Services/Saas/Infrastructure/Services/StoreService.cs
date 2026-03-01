@@ -55,10 +55,10 @@ public class StoreService : IStoreService
         {
             var plan = await _db.ServicePlans.FindAsync(dto.PlanId.Value);
             if (plan == null)
-                throw new Exception("Service plan not found");
+                throw new Exception("Không tìm thấy gói dịch vụ");
 
             if (plan.IsActive != true)
-                throw new Exception("This plan is not available");
+                throw new Exception("Gói dịch vụ không khả dụng");
 
             // Create pending subscription
             var subscription = new Subscription
