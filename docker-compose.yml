@@ -82,6 +82,8 @@ services:
       - SePay__BankName=MBBank
       - SePay__AccountNumber=0917213712
       - SePay__AccountName=TRAN HOANG TUAN MINH
+      # Gemini AI (Chatbot)
+      - Gemini__ApiKey=${GEMINI_API_KEY}
     ports:
       - "5031:8080"
     depends_on:

@@ -10,6 +10,7 @@ namespace _360Retail.Services.Sales.API.Controllers;
 [Route("api/dashboard")]
 [Authorize(Roles = "StoreOwner,Manager")]
 [RequiresActiveSubscription]
+[RequiresFeature("has_dashboard")]
 public class DashboardController : BaseApiController
 {
     private readonly IDashboardService _dashboardService;

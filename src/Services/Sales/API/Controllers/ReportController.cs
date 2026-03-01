@@ -1,4 +1,5 @@
 using _360Retail.Services.Sales.Application.Interfaces;
+using _360Retail.Shared.Filters;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,7 @@ namespace _360Retail.Services.Sales.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[RequiresFeature("has_export_excel")]
 public class ReportController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;

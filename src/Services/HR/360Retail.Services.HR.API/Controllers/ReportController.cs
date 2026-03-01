@@ -9,6 +9,7 @@ namespace _360Retail.Services.HR.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+[_360Retail.Shared.Filters.RequiresFeature("has_export_excel")]
 public class ReportController : ControllerBase
 {
     private readonly ITimekeepingService _timekeepingService;

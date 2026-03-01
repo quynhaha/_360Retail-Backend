@@ -8,12 +8,14 @@ using _360Retail.Services.CRM.Application.DTOs;
 using _360Retail.Services.CRM.Application.Services;
 using _360Retail.Services.CRM.Domain.Entities;
 using _360Retail.Services.CRM.Application.Interfaces;
+using _360Retail.Shared.Filters;
 
 namespace _360Retail.Services.CRM.API.Controllers;
 
 [ApiController]
 [Route("api")]
 [Authorize(Roles = "StoreOwner,Manager")]
+[RequiresFeature("has_loyalty")]
 public class LoyaltyController : ControllerBase
 {
     private readonly ILoyaltyService _loyaltyService;

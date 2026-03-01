@@ -468,7 +468,7 @@ SELECT
     'Basic', 
     199000, 
     30, 
-    '{"max_products": 100, "max_employees": 5, "max_orders": 500}'::jsonb, 
+    '{"max_products": 200, "max_employees": 10, "max_orders": 500}'::jsonb, 
     TRUE,
     NOW()
 WHERE NOT EXISTS (SELECT 1 FROM saas.service_plans WHERE plan_name = 'Basic');
@@ -480,19 +480,19 @@ SELECT
     'Pro', 
     499000, 
     30, 
-    '{"max_products": 500, "max_employees": 20, "max_orders": 2000}'::jsonb, 
+    '{"max_products": -1, "max_employees": 20, "max_orders": 2000}'::jsonb, 
     TRUE,
     NOW()
 WHERE NOT EXISTS (SELECT 1 FROM saas.service_plans WHERE plan_name = 'Pro');
 
--- Yearly Plan - 1,990,000 VND / 365 days (save 2 months)
+-- Yearly Plan - 4,990,000 VND / 365 days (= Pro trả theo năm, tiết kiệm ~17%)
 INSERT INTO saas.service_plans (id, plan_name, price, duration_days, features, is_active, created_at)
 SELECT 
     uuid_generate_v4(), 
     'Yearly', 
-    1990000, 
+    4990000, 
     365, 
-    '{"max_products": 1000, "max_employees": 50, "max_orders": -1}'::jsonb, 
+    '{"max_products": -1, "max_employees": 50, "max_orders": -1}'::jsonb, 
     TRUE,
     NOW()
 WHERE NOT EXISTS (SELECT 1 FROM saas.service_plans WHERE plan_name = 'Yearly');
@@ -645,3 +645,48 @@ CREATE TABLE IF NOT EXISTS identity.notifications (
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user
 ON identity.notifications(user_id, is_read, created_at DESC);
+
+-- 01/03/2026: Update service plans with feature flags for tier differentiation
+-- Trial: chỉ bán hàng cơ bản
+UPDATE saas.service_plans SET features = '{
+  "max_products": 50, "max_employees": 3, "max_orders": 100,
+  "has_variants": false, "has_dashboard": false,
+  "has_gps_checkin": false, "has_tasks": false,
+  "has_feedback_qr": false, "has_loyalty": false,
+  "has_export_excel": false, "has_invite_staff": false,
+  "has_multi_store": false, "has_realtime_notifications": false,
+  "has_inventory_tickets": false
+}'::jsonb WHERE plan_name = 'Trial';
+
+-- Basic: dashboard, tasks, mời NV, phiếu kho, biến thể SP (10 NV)
+UPDATE saas.service_plans SET features = '{
+  "max_products": 200, "max_employees": 10, "max_orders": 500,
+  "has_variants": true, "has_dashboard": true,
+  "has_gps_checkin": false, "has_tasks": true,
+  "has_feedback_qr": false, "has_loyalty": false,
+  "has_export_excel": false, "has_invite_staff": true,
+  "has_multi_store": false, "has_realtime_notifications": true,
+  "has_inventory_tickets": true
+}'::jsonb WHERE plan_name = 'Basic';
+
+-- Pro: full tính năng (GPS, CRM, Loyalty, Export, Multi-store)
+UPDATE saas.service_plans SET features = '{
+  "max_products": -1, "max_employees": 20, "max_orders": 2000,
+  "has_variants": true, "has_dashboard": true,
+  "has_gps_checkin": true, "has_tasks": true,
+  "has_feedback_qr": true, "has_loyalty": true,
+  "has_export_excel": true, "has_invite_staff": true,
+  "has_multi_store": true, "has_realtime_notifications": true,
+  "has_inventory_tickets": true
+}'::jsonb WHERE plan_name = 'Pro';
+
+-- Yearly: = Pro features + unlimited (giá năm, tiết kiệm 17%)
+UPDATE saas.service_plans SET price = 4990000, features = '{
+  "max_products": -1, "max_employees": 50, "max_orders": -1,
+  "has_variants": true, "has_dashboard": true,
+  "has_gps_checkin": true, "has_tasks": true,
+  "has_feedback_qr": true, "has_loyalty": true,
+  "has_export_excel": true, "has_invite_staff": true,
+  "has_multi_store": true, "has_realtime_notifications": true,
+  "has_inventory_tickets": true
+}'::jsonb WHERE plan_name = 'Yearly';

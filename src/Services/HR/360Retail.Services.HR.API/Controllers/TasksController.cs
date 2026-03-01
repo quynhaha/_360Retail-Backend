@@ -10,7 +10,8 @@ namespace _360Retail.Services.HR.API.Controllers;
 [ApiController]
 [Route("api/tasks")]
 [Authorize]
-[RequiresActiveSubscription]  // Block writes for expired trials
+[RequiresActiveSubscription]
+[_360Retail.Shared.Filters.RequiresFeature("has_tasks")]
 public class TasksController : ControllerBase
 {
     private readonly ITaskService _taskService;

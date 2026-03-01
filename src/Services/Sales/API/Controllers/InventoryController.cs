@@ -10,6 +10,7 @@ namespace _360Retail.Services.Sales.API.Controllers;
 [Route("api/inventory")]
 [Authorize(Roles = "StoreOwner,Manager,Staff")]
 [RequiresActiveSubscription]
+[RequiresFeature("has_inventory_tickets")]
 public class InventoryController : BaseApiController
 {
     private readonly IInventoryService _inventoryService;

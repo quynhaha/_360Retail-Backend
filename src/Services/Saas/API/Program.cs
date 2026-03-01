@@ -82,6 +82,7 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddSingleton<VNPayService>();
 builder.Services.AddSingleton<SePayService>();
 builder.Services.AddScoped<IPlanReviewService, PlanReviewService>();
+builder.Services.AddSingleton<ChatbotService>();
 
 // Shared Email Services (for subscription expiry notifications)
 builder.Services.AddSharedEmailServices();

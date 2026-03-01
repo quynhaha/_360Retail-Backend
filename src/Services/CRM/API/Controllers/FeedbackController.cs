@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using _360Retail.Services.CRM.Application.DTOs;
 using _360Retail.Services.CRM.Application.Services;
+using _360Retail.Shared.Filters;
 using System.Security.Claims;
 
 namespace _360Retail.Services.CRM.API.Controllers;
@@ -44,6 +45,7 @@ public class FeedbackController : ControllerBase
     /// </summary>
     [HttpPost]
     [Authorize(Roles = "StoreOwner,Manager,Staff")]
+    [RequiresFeature("has_feedback_qr")]
     public async Task<IActionResult> Create([FromBody] CreateFeedbackDto dto)
     {
         var storeId = GetStoreIdFromToken();

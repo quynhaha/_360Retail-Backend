@@ -8,7 +8,7 @@ using System.Security.Claims;
 namespace _360Retail.Services.HR.API.Controllers;
 
 /// <summary>
-/// Chấm công nhân viên (Check-in/out, lịch sử, tổng hợp)
+/// Chấm công nhân viên (Check-in/out, upload selfie, lịch sử, tổng hợp)
 /// </summary>
 [ApiController]
 [Route("api/timekeeping")]
@@ -17,10 +17,12 @@ namespace _360Retail.Services.HR.API.Controllers;
 public class TimekeepingController : ControllerBase
 {
     private readonly ITimekeepingService _timekeepingService;
+    private readonly IStorageService _storageService;
 
-    public TimekeepingController(ITimekeepingService timekeepingService)
+    public TimekeepingController(ITimekeepingService timekeepingService, IStorageService storageService)
     {
         _timekeepingService = timekeepingService;
+        _storageService = storageService;
     }
 
     #region Check-in / Check-out
@@ -47,6 +49,33 @@ public class TimekeepingController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { success = false, message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Upload ảnh selfie lên Cloudinary, trả về URL để gửi kèm check-in
+    /// </summary>
+    [HttpPost("upload-selfie")]
+    public async Task<IActionResult> UploadSelfie(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { success = false, message = "Vui lòng chọn ảnh" });
+
+        if (file.Length > 5 * 1024 * 1024)
+            return BadRequest(new { success = false, message = "Ảnh không được vượt quá 5MB" });
+
+        var allowedTypes = new[] { "image/jpeg", "image/png", "image/webp" };
+        if (!allowedTypes.Contains(file.ContentType.ToLower()))
+            return BadRequest(new { success = false, message = "Chỉ chấp nhận ảnh JPEG, PNG hoặc WebP" });
+
+        try
+        {
+            var imageUrl = await _storageService.SaveFileAsync(file, "timekeeping-selfies");
+            return Ok(new { success = true, data = new { imageUrl }, message = "Upload ảnh thành công" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = $"Upload thất bại: {ex.Message}" });
         }
     }
 
