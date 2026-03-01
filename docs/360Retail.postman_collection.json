@@ -2588,6 +2588,129 @@
                     }
                 }
             ]
+        },
+        {
+            "name": "🤖 19. SaaS - AI Chatbot",
+            "description": "AI Chatbot hỗ trợ khách hàng (Hybrid FAQ + Gemini AI)",
+            "item": [
+                {
+                    "name": "Chat with Bot ⭐",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"message\": \"Bảng giá 360Retail như thế nào?\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/chatbot",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "chatbot"
+                            ]
+                        },
+                        "description": "Gửi tin nhắn → nhận phản hồi từ AI Chatbot.\n\n**Hybrid mode:**\n- Nếu match FAQ keyword → trả lời ngay (nhanh, 0 cost)\n- Nếu không match → gọi Gemini AI (thông minh hơn)\n\n**Keywords mẫu:** giá, đăng ký, thanh toán, tính năng, so sánh gói, team"
+                    }
+                },
+                {
+                    "name": "Chat - Ask about Pricing",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"message\": \"So sánh gói Basic và Pro\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/chatbot",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "chatbot"
+                            ]
+                        },
+                        "description": "Hỏi so sánh gói → trả bảng Markdown so sánh Basic vs Pro."
+                    }
+                },
+                {
+                    "name": "Chat - General Question (AI)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"message\": \"Làm sao để quản lý kho hàng hiệu quả?\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/chatbot",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "chatbot"
+                            ]
+                        },
+                        "description": "Câu hỏi tự do → AI Gemini trả lời dựa trên context 360Retail."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📸 20. HR - Upload Selfie",
+            "description": "Upload ảnh chấm công lên Cloudinary",
+            "item": [
+                {
+                    "name": "Upload Selfie ⭐",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": "",
+                                    "description": "Ảnh selfie (JPG/PNG, max 5MB)"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/hr/timekeeping/upload-selfie",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "hr",
+                                "timekeeping",
+                                "upload-selfie"
+                            ]
+                        },
+                        "description": "Upload ảnh selfie check-in → Cloudinary.\n\n**Response:** `{ success: true, data: { imageUrl: 'https://res.cloudinary.com/...' } }`\n\n**Dùng với Check-In:** Upload selfie → lấy imageUrl → gửi trong body Check-In."
+                    }
+                }
+            ]
         }
     ]
 }

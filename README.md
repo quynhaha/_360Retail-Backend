@@ -54,10 +54,13 @@
 
 - **Runtime:** .NET 8 / ASP.NET Core
 - **Database:** PostgreSQL 16
+- **Cache:** Redis (dashboard, token blacklist)
 - **ORM:** Entity Framework Core
 - **Auth:** JWT + Google OAuth 2.0
 - **Payment:** VNPay API v2.1.0 + SePay (QR chuyển khoản)
-- **Storage:** Cloudinary (product images)
+- **AI:** Google Gemini API (chatbot)
+- **Storage:** Cloudinary (product images, selfie check-in)
+- **Real-time:** SignalR WebSocket (notifications)
 - **Gateway:** Ocelot (routing, rate limiting, Swagger aggregation)
 - **Container:** Docker + Docker Compose
 - **Email:** Resend API
@@ -89,7 +92,7 @@ Chỉnh sửa file `.env` với các giá trị thực:
 OAUTH_GOOGLE_CLIENT_ID=your_google_client_id
 OAUTH_GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-# Cloudinary (upload ảnh sản phẩm)
+# Cloudinary (upload ảnh sản phẩm + selfie)
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
@@ -97,6 +100,9 @@ CLOUDINARY_API_SECRET=your_api_secret
 # Resend (gửi email)
 RESEND_API_KEY=your_resend_api_key
 RESEND_FROM_EMAIL=noreply@yourdomain.com
+
+# Gemini AI (chatbot)
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ### 2. Khởi động toàn bộ
@@ -154,10 +160,13 @@ Hệ thống sử dụng **1 Database chung** (`360RetailDB`) với các **schem
 
 ### 🏪 SaaS & Subscription
 - Trial 7 ngày → Paid plans (Basic, Pro, Yearly)
+- **Bảng giá:** Basic 199k/th, Pro 499k/th, Yearly 4.99M/năm (tiết kiệm 17%)
 - Thanh toán qua **VNPay** (redirect) và **SePay** (QR chuyển khoản)
 - Auto-activate sau payment thành công
+- **Feature Gate:** `[RequiresFeature]` — chặn tính năng theo gói subscription
 - Subscription expiry notifications (email)
 - Plan reviews & ratings
+- **AI Chatbot:** Hybrid FAQ + Google Gemini hỗ trợ khách hàng
 
 ### 🛒 Sales (POS)
 - Quản lý sản phẩm + biến thể (size, color, SKU)
@@ -166,12 +175,15 @@ Hệ thống sử dụng **1 Database chung** (`360RetailDB`) với các **schem
 - Cancel order + restore stock tự động
 - Inventory management (import/export tickets)
 - Dashboard analytics (revenue, top products, order status)
+- **Export Excel** (báo cáo doanh thu, top sản phẩm)
 - Low stock email alerts
+- **Redis caching** (dashboard, products)
 
 ### 👥 HR
 - Quản lý nhân viên + Avatar upload
-- Chấm công GPS + ảnh check-in
+- Chấm công GPS + **upload selfie** (Cloudinary)
 - Giao việc với deadline + priority + status tracking
+- **Export Excel** báo cáo chấm công
 
 ### 💎 CRM & Loyalty
 - Quản lý khách hàng (phone unique per store)
@@ -180,6 +192,23 @@ Hệ thống sử dụng **1 Database chung** (`360RetailDB`) với các **schem
 - 3 loại rule: % order value, fixed/order, per quantity
 - Đổi điểm (redeem) + lịch sử giao dịch
 - Customer feedback (public QR + staff-entered)
+
+### 💰 Phân quyền tính năng theo gói
+
+| Tính năng | Trial | Basic | Pro | Yearly |
+|-----------|:-----:|:-----:|:---:|:------:|
+| Bán hàng cơ bản | ✅ | ✅ | ✅ | ✅ |
+| Dashboard & Báo cáo | ❌ | ✅ | ✅ | ✅ |
+| Tasks & Giao việc | ❌ | ✅ | ✅ | ✅ |
+| Phiếu kho nâng cao | ❌ | ✅ | ✅ | ✅ |
+| Mời nhân viên | ❌ | ✅ | ✅ | ✅ |
+| Thông báo realtime | ❌ | ✅ | ✅ | ✅ |
+| Chấm công GPS | ❌ | ❌ | ✅ | ✅ |
+| CRM & Loyalty | ❌ | ❌ | ✅ | ✅ |
+| Export Excel | ❌ | ❌ | ✅ | ✅ |
+| Multi-store | ❌ | ❌ | ✅ | ✅ |
+| Max nhân viên | 3 | 10 | 20 | 50 |
+| Max sản phẩm | 50 | 200 | ∞ | ∞ |
 
 ---
 
@@ -249,4 +278,4 @@ Khi vượt giới hạn → HTTP `429 Too Many Requests`
 
 ---
 
-*Last updated: 28/02/2026*
+*Last updated: 01/03/2026*
