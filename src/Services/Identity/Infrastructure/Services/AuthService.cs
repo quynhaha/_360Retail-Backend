@@ -678,7 +678,10 @@ public class AuthService : IAuthService
                 throw new Exception("Chưa cấu hình Google OAuth Client ID");
             }
             
-            if (tokenInfo?.Aud != expectedClientId)
+            var validClientIds = expectedClientId.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                                 .Select(id => id.Trim());
+
+            if (tokenInfo?.Aud == null || !validClientIds.Contains(tokenInfo.Aud))
             {
                 throw BusinessException.ValidationFailed("Token không thuộc ứng dụng này");
             }
