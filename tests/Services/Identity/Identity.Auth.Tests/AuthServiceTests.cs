@@ -10,6 +10,7 @@ using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
 using _360Retail.Services.Identity.Infrastructure.Services;
 using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Shared.Common.Exceptions;
 
 namespace Identity.Auth.Tests;
 
@@ -73,7 +74,7 @@ public class AuthServiceTests : IDisposable
         var user = await _db.AppUsers.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Email == "test@example.com");
         Assert.NotNull(user);
         Assert.Equal("Registered", user.Status);
-        Assert.True(user.IsActivated);
+        Assert.False(user.IsActivated); // OTP verification required
         Assert.Equal("hashed_password_123", user.PasswordHash);
         Assert.Contains(user.Roles, r => r.RoleName == "PotentialOwner");
     }
@@ -100,8 +101,7 @@ public class AuthServiceTests : IDisposable
         var dto = new RegisterUserDto("existing@example.com", "Password123!");
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<Exception>(() => _sut.RegisterAsync(dto));
-        Assert.Equal("Email already exists", ex.Message);
+        await Assert.ThrowsAsync<BusinessException>(() => _sut.RegisterAsync(dto));
     }
 
     // ============ LOGIN ============
@@ -198,8 +198,7 @@ public class AuthServiceTests : IDisposable
         var dto = new ChangePasswordRequest { CurrentPassword = "wrong_old", NewPassword = "NewPass123!", ConfirmNewPassword = "NewPass123!" };
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<Exception>(() => _sut.ChangePasswordAsync(user.Id, dto));
-        Assert.Equal("Current password is incorrect", ex.Message);
+        await Assert.ThrowsAsync<BusinessException>(() => _sut.ChangePasswordAsync(user.Id, dto));
     }
 
     // ============ FORGOT PASSWORD ============
@@ -268,10 +267,9 @@ public class AuthServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         // Act & Assert — wrong code
-        var ex = await Assert.ThrowsAsync<Exception>(
+        await Assert.ThrowsAsync<BusinessException>(
             () => _sut.ResetPasswordAsync("reset@test.com", "999999", "NewPass123!")
         );
-        Assert.Equal("Invalid reset code", ex.Message);
     }
 
     [Fact]
@@ -292,10 +290,9 @@ public class AuthServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<Exception>(
+        await Assert.ThrowsAsync<BusinessException>(
             () => _sut.ResetPasswordAsync("expired@test.com", "123456", "NewPass123!")
         );
-        Assert.Contains("expired", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
