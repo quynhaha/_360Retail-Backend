@@ -55,6 +55,7 @@
 | 28b | GET | `/saas/payments/initiate?provider=sepay` | ✅ | Tạo QR chuyển khoản (SePay) |
 | 29 | GET | `/saas/payments/vnpay-return` | ❌ | VNPay callback |
 | 29b | POST | `/saas/payments/sepay-webhook` | ❌ | SePay IPN webhook |
+| 29c | GET | `/saas/payments/{paymentId}/status` | ✅ | Check trạng thái payment (FE polling) |
 | 30 | POST | `/saas/plan-reviews` | ✅ Owner | Tạo đánh giá gói đã mua |
 | 31 | GET | `/saas/plan-reviews/me/{planId}` | ✅ | Xem review của tôi |
 | 32 | GET | `/saas/plan-reviews/plan/{planId}` | ❌ | DS reviews 1 gói (public) |
@@ -381,6 +382,33 @@ FE hiển thị:
 - `qrCodeUrl` → `<img>` cho user quét QR
 - `bankInfo` → hiển thị thông tin CK thủ công
 - `paymentCode` → nội dung CK (bắt buộc đúng để SePay nhận diện)
+
+### Bước 2.3b: Polling trạng thái thanh toán (SePay)
+
+Sau khi hiển thị QR, FE gọi polling mỗi **5-10 giây** để check trạng thái:
+
+```
+GET /saas/payments/{paymentId}/status
+```
+→ Response:
+```json
+{
+  "success": true,
+  "paymentId": "xxx",
+  "status": "Pending",
+  "amount": 199000,
+  "paymentDate": null,
+  "transactionCode": null
+}
+```
+
+| Status | Ý nghĩa | FE action |
+|--------|---------|----------|
+| `Pending` | Chưa nhận được tiền | Tiếp tục polling |
+| `Completed` | Đã thanh toán ✅ | Chuyển trang thành công |
+| `Failed` | Thất bại | Hiển thị lỗi |
+
+> ⚠️ FE nên dừng polling sau **5 phút** (60 lần × 5s) và hiển thị "Vui lòng kiểm tra lại sau".
 
 ### Bước 2.4: Refresh Token sau thanh toán
 ```

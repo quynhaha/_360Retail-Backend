@@ -733,6 +733,26 @@
                         },
                         "description": "Giả lập SePay webhook (IPN). Thay `360RXXXXXXXX` bằng paymentCode thật từ Initiate SePay.\n\nKhi deploy: SePay tự gọi endpoint này khi có CK vào TK MBBank."
                     }
+                },
+                {
+                    "name": "Check Payment Status (Polling) 🔄",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/payments/{{paymentId}}/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "payments",
+                                "{{paymentId}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Check trạng thái payment (FE polling sau khi hiển thị QR SePay).\n\nFE gọi mỗi 5-10 giây. Khi status = 'Completed' → chuyển trang thành công.\n\nResponse:\n- status: Pending | Completed | Failed\n- amount: số tiền\n- paymentDate: ngày thanh toán (null nếu chưa TT)\n- transactionCode: mã giao dịch SePay"
+                    }
                 }
             ]
         },
