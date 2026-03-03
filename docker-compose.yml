@@ -14,6 +14,16 @@ services:
     networks:
       - 360retail-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: 360retail-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - 360retail-network
+
   pgadmin:
     image: dpage/pgadmin4
     container_name: 360retail-pgadmin
@@ -33,20 +43,24 @@ services:
       dockerfile: src/Services/Identity/API/Dockerfile
     container_name: 360retail-identity-api
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
       - ServiceUrls__HrService=http://hr-api:8080
       - ServiceUrls__SaasService=http://saas-api:8080
       - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID}
       - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET}
-      - InternalApi__Key=360retail-internal-secret-key-2026
+      - InternalApi__Key=${INTERNAL_API_KEY:-360retail-internal-secret-key-2026}
+      - JwtSettings__Key=${JWT_SECRET_KEY:-THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL}
       # Resend (Email Service)
       - Resend__ApiKey=${RESEND_API_KEY}
       - Resend__FromEmail=${RESEND_FROM_EMAIL}
+      # Redis Cache
+      - ConnectionStrings__Redis=redis:6379
     ports:
       - "5297:8080"
     depends_on:
       - postgres
+      - redis
     networks:
       - 360retail-network
 
@@ -56,13 +70,22 @@ services:
       dockerfile: src/Services/Saas/API/Dockerfile
     container_name: 360retail-saas-api
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ConnectionStrings__SaasDb=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
       - ServiceUrls__IdentityService=http://identity-api:8080
-      - InternalApi__Key=360retail-internal-secret-key-2026
+      - InternalApi__Key=${INTERNAL_API_KEY:-360retail-internal-secret-key-2026}
+      - JwtSettings__Key=${JWT_SECRET_KEY:-THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL}
       # Resend (Email Service)
       - Resend__ApiKey=${RESEND_API_KEY}
       - Resend__FromEmail=${RESEND_FROM_EMAIL}
+      # SePay (Bank Transfer Payment)
+      - SePay__MerchantId=${SEPAY_MERCHANT_ID}
+      - SePay__SecretKey=${SEPAY_SECRET_KEY}
+      - SePay__BankName=${SEPAY_BANK_NAME:-MBBank}
+      - SePay__AccountNumber=${SEPAY_ACCOUNT_NUMBER}
+      - SePay__AccountName=${SEPAY_ACCOUNT_NAME}
+      # Gemini AI (Chatbot)
+      - Gemini__ApiKey=${GEMINI_API_KEY}
     ports:
       - "5031:8080"
     depends_on:
@@ -76,14 +99,17 @@ services:
       dockerfile: src/Services/Sales/API/Dockerfile
     container_name: 360retail-sales-api
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
       # Cloudinary Configuration - Set these in .env file
       - Cloudinary__CloudName=${CLOUDINARY_CLOUD_NAME}
       - Cloudinary__ApiKey=${CLOUDINARY_API_KEY}
       - Cloudinary__ApiSecret=${CLOUDINARY_API_SECRET}
       - ServiceUrls__CrmService=http://crm-api:8080
-      - InternalApi__Key=360retail-internal-secret-key-2026
+      - InternalApi__Key=${INTERNAL_API_KEY:-360retail-internal-secret-key-2026}
+      - JwtSettings__Key=${JWT_SECRET_KEY:-THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL}
+      # Redis Cache
+      - ConnectionStrings__Redis=redis:6379
       # Resend (Email Service)
       - Resend__ApiKey=${RESEND_API_KEY}
       - Resend__FromEmail=${RESEND_FROM_EMAIL}
@@ -91,6 +117,7 @@ services:
       - "5091:8080"
     depends_on:
       - postgres
+      - redis
     networks:
       - 360retail-network
 
@@ -100,11 +127,11 @@ services:
       dockerfile: src/Services/HR/360Retail.Services.HR.API/Dockerfile
     container_name: 360retail-hr-api
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
       - ServiceUrls__IdentityService=http://identity-api:8080
-      - InternalApi__Key=360retail-internal-secret-key-2026
-      - JwtSettings__Key=THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL
+      - InternalApi__Key=${INTERNAL_API_KEY:-360retail-internal-secret-key-2026}
+      - JwtSettings__Key=${JWT_SECRET_KEY:-THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL}
       - JwtSettings__Issuer=360Retail_Identity
       - JwtSettings__Audience=360Retail_Users
       - Cloudinary__CloudName=${CLOUDINARY_CLOUD_NAME}
@@ -126,12 +153,12 @@ services:
       dockerfile: src/Services/CRM/API/Dockerfile
     container_name: 360retail-crm-api
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345
-      - JwtSettings__Key=THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL
+      - JwtSettings__Key=${JWT_SECRET_KEY:-THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL}
       - JwtSettings__Issuer=360Retail_Identity
       - JwtSettings__Audience=360Retail_Users
-      - InternalApi__Key=360retail-internal-secret-key-2026
+      - InternalApi__Key=${INTERNAL_API_KEY:-360retail-internal-secret-key-2026}
     ports:
       - "5169:8080"
     depends_on:
@@ -145,7 +172,7 @@ services:
       dockerfile: src/ApiGateway/Dockerfile
     container_name: 360retail-api-gateway
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
     ports:
       - "5001:8080"
     depends_on:
@@ -163,3 +190,4 @@ networks:
 
 volumes:
   postgres_data:
+  redis_data:

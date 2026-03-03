@@ -37,4 +37,15 @@ public class ResendEmailService : IEmailService
         await _emailSender.SendAsync(toEmail, "[360Retail] Đặt lại mật khẩu", html);
         _logger.LogInformation("Forgot password email sent to {Email}", toEmail);
     }
+
+    public async Task SendVerificationEmailAsync(
+        string toEmail,
+        string userName,
+        string otpCode,
+        int expiryMinutes = 10)
+    {
+        var html = EmailTemplateService.EmailVerification(userName, otpCode, expiryMinutes);
+        await _emailSender.SendAsync(toEmail, "[360Retail] Xác nhận email đăng ký", html);
+        _logger.LogInformation("Verification email sent to {Email}", toEmail);
+    }
 }

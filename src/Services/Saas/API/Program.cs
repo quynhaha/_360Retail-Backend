@@ -11,12 +11,20 @@ using _360Retail.Services.Saas.API.Services;
 using Microsoft.OpenApi.Models;
 using _360Retail.Services.Saas.Infrastructure.HttpClients;
 using _360Retail.Shared.Email;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ===== SERILOG =====
+builder.Host.UseSerilog((context, config) => config
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.WithProperty("Service", "SaaS")
+    .WriteTo.Console());
 
 // Controllers
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -72,7 +80,9 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
 builder.Services.AddScoped<IStoreService, StoreService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddSingleton<VNPayService>();
+builder.Services.AddSingleton<SePayService>();
 builder.Services.AddScoped<IPlanReviewService, PlanReviewService>();
+builder.Services.AddSingleton<ChatbotService>();
 
 // Shared Email Services (for subscription expiry notifications)
 builder.Services.AddSharedEmailServices();
@@ -121,7 +131,10 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Global Exception Handler - must be first
+// Serilog request logging - must be first to see final status codes
+app.UseSerilogRequestLogging();
+
+// Global Exception Handler - converts exceptions to proper HTTP responses
 app.UseGlobalExceptionHandler();
 
 // Middleware
@@ -138,5 +151,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

@@ -36,13 +36,13 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                 c.Id == request.CategoryId &&
                 c.StoreId == storeId);
             if (!categoryExists)
-                throw new Exception("Category does not belong to this store");
+                throw new Exception("Danh mục không thuộc cửa hàng này");
             // 2. Check trùng Product trong Store
             bool productExists = await _context.Products.AnyAsync(p =>
                 p.StoreId == storeId &&
                 p.ProductName == request.ProductName);
             if (productExists)
-                throw new Exception("Product already exists in this store");
+                throw new Exception("Sản phẩm đã tồn tại trong cửa hàng");
             
             // 3. Tạo Product entity
             var product = new Product
@@ -134,7 +134,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                 .Include(p => p.ProductVariants)
                 .FirstOrDefaultAsync(p => p.Id == id && p.StoreId == storeId);
             if (product == null)
-                throw new Exception("Product not found");
+                throw new Exception("Không tìm thấy sản phẩm");
             return _mapper.Map<ProductDto>(product);
         }
 
@@ -145,7 +145,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                 p.StoreId == storeId);
 
             if (product == null)
-                throw new Exception("Product not found");
+                throw new Exception("Không tìm thấy sản phẩm");
 
             // PARTIAL UPDATE: Only update fields that are provided (not null)
 
@@ -157,7 +157,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                     c.StoreId == storeId);
 
                 if (!categoryExists)
-                    throw new Exception("Category does not belong to this store");
+                    throw new Exception("Danh mục không thuộc cửa hàng này");
                 
                 product.CategoryId = request.CategoryId.Value;
             }
@@ -251,7 +251,7 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
                 p.StoreId == storeId);
 
             if (product == null)
-                throw new Exception("Product not found");
+                throw new Exception("Không tìm thấy sản phẩm");
             // if (!string.IsNullOrEmpty(product.ImageUrl))
             //     await _storageService.DeleteFileAsync(product.ImageUrl);
             // _context.Products.Remove(product);

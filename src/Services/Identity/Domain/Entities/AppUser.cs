@@ -68,5 +68,12 @@ public partial class AppUser
     
     [Column("password_reset_expiry")]
     public DateTime? PasswordResetExpiry { get; set; }
+
+    // Email Verification OTP fields
+    [Column("email_verification_code")]
+    public string? EmailVerificationCode { get; set; }
+    
+    [Column("email_verification_expiry")]
+    public DateTime? EmailVerificationExpiry { get; set; }
 }
 

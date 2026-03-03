@@ -67,10 +67,10 @@ public class SubscriptionService : ISubscriptionService
     {
         var plan = await _db.ServicePlans.FindAsync(planId);
         if (plan == null)
-            throw new Exception("Service plan not found");
+            throw new Exception("Không tìm thấy gói dịch vụ");
 
         if (plan.IsActive != true)
-            throw new Exception("This plan is not available");
+            throw new Exception("Gói dịch vụ không khả dụng");
 
         // Create a pending subscription
         var subscription = new Subscription
@@ -175,5 +175,13 @@ public class SubscriptionService : ISubscriptionService
             payment.Subscription.Plan.Price,
             payment.Subscription.Plan.DurationDays
         );
+    }
+
+    public async Task<IEnumerable<Guid>> GetPendingPaymentIdsAsync()
+    {
+        return await _db.Payments
+            .Where(p => p.Status == "Pending")
+            .Select(p => p.Id)
+            .ToListAsync();
     }
 }

@@ -9,16 +9,38 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using Serilog;
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
+
+// ===== SERILOG =====
+builder.Host.UseSerilog((context, config) => config
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.WithProperty("Service", "Sales")
+    .WriteTo.Console());
+
 var connString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Logging.AddConsole();
-var startupLogger = LoggerFactory.Create(b => b.AddConsole()).CreateLogger("Startup");
-startupLogger.LogInformation("Sales API connecting to database: {ConnectionString}", connString);
 
 
 builder.Services.AddDbContext<SalesDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ===== REDIS CACHE =====
+var redisConn = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConn))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConn;
+        options.InstanceName = "360Retail_Sales_";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache(); // Fallback for local dev
+}
+builder.Services.AddSingleton<CacheService>();
+
 builder.Services.AddControllers();
 
 // Add CORS
@@ -37,6 +59,7 @@ builder.Services.AddCors(options =>
 // Add services
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
 builder.Services.AddSwaggerGen(option =>
 {
     option.SwaggerDoc("v1", new OpenApiInfo { Title = "Sales API", Version = "v1" });
@@ -119,7 +142,10 @@ var app = builder.Build();
 //  KHU VỰC CẤU HÌNH PIPELINE (Middleware)
 // ==========================================
 
-// Global Exception Handler - must be first
+// Serilog request logging - must be first to see final status codes
+app.UseSerilogRequestLogging();
+
+// Global Exception Handler - converts exceptions to proper HTTP responses
 app.UseGlobalExceptionHandler();
 
 // Configure the HTTP request pipeline.
@@ -134,29 +160,6 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication(); 
 app.UseAuthorization(); 
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

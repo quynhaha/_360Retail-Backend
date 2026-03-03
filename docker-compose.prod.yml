@@ -1,0 +1,45 @@
+# Docker Compose Production Override
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  postgres:
+    restart: always
+    ports: [] # Don't expose DB port in production
+
+  redis:
+    restart: always
+    ports: [] # Don't expose Redis port in production
+
+  pgadmin:
+    profiles:
+      - debug # Only start pgadmin with: docker compose --profile debug up
+
+  identity-api:
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+
+  saas-api:
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+
+  sales-api:
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+
+  hr-api:
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+
+  crm-api:
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+
+  api-gateway:
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production

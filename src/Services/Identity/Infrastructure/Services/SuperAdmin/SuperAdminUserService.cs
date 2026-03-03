@@ -43,7 +43,7 @@ public class SuperAdminUserService : ISuperAdminUserService
             .FirstOrDefaultAsync(u => u.Id == id);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw new Exception("Không tìm thấy người dùng");
 
         return new UserDto
         {
@@ -61,16 +61,16 @@ public class SuperAdminUserService : ISuperAdminUserService
     public async Task<Guid> CreateAsync(CreateUserDto dto)
     {
         if (dto.RoleName == "SuperAdmin")
-            throw new Exception("Cannot create SuperAdmin via API");
+            throw new Exception("Không thể tạo tài khoản SuperAdmin qua API");
 
         if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email))
-            throw new Exception("Email already exists");
+            throw new Exception("Email đã tồn tại");
 
         var role = await _db.AppRoles
             .FirstOrDefaultAsync(r => r.RoleName == dto.RoleName);
 
         if (role == null)
-            throw new Exception("Invalid role");
+            throw new Exception("Vai trò không hợp lệ");
 
         var user = new AppUser
         {
@@ -98,7 +98,7 @@ public class SuperAdminUserService : ISuperAdminUserService
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == id);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw new Exception("Không tìm thấy người dùng");
 
         // Only update fields that are provided (not null)
         if (dto.IsActivated.HasValue)
@@ -118,11 +118,11 @@ public class SuperAdminUserService : ISuperAdminUserService
             .FirstOrDefaultAsync(u => u.Id == id);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw new Exception("Không tìm thấy người dùng");
 
         // ❗ Không cho xoá SuperAdmin
         if (user.Roles.Any(r => r.RoleName == "SuperAdmin"))
-            throw new Exception("Cannot delete SuperAdmin");
+            throw new Exception("Không thể xóa tài khoản SuperAdmin");
 
         _db.AppUsers.Remove(user);
         await _db.SaveChangesAsync();

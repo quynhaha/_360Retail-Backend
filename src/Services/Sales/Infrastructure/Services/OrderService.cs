@@ -47,7 +47,7 @@ public class OrderService : IOrderService
                 .FirstOrDefaultAsync();
             
             if (customerExists == null)
-                throw new Exception("Customer not found or does not belong to this store");
+                throw new Exception("Không tìm thấy khách hàng hoặc khách hàng không thuộc cửa hàng");
             
             validatedCustomerId = dto.CustomerId.Value;
         }
@@ -61,7 +61,7 @@ public class OrderService : IOrderService
             
         // Check if all products exist
         if (products.Count != productIds.Count)
-            throw new Exception("Some products were not found or belong to another store");
+            throw new Exception("Một số sản phẩm không tìm thấy hoặc thuộc cửa hàng khác");
 
         // 4. Prepare Order
         var order = new Order
@@ -89,7 +89,7 @@ public class OrderService : IOrderService
             // Validation: If product has variants, must select a variant
             if (product.HasVariants && !itemDto.ProductVariantId.HasValue)
             {
-                throw new Exception($"Product '{product.ProductName}' has variants. Please select a variant.");
+                throw new Exception($"Sản phẩm '{product.ProductName}' có biến thể. Vui lòng chọn biến thể.");
             }
             
             decimal finalPrice = product.Price;
@@ -99,10 +99,10 @@ public class OrderService : IOrderService
             {
                 // Handle Variant
                 var variant = product.ProductVariants.FirstOrDefault(v => v.Id == itemDto.ProductVariantId.Value);
-                if (variant == null) throw new Exception($"Variant not found for product '{product.ProductName}'");
+                if (variant == null) throw new Exception($"Không tìm thấy biến thể của sản phẩm '{product.ProductName}'");
                 
                 if (variant.StockQuantity < itemDto.Quantity)
-                    throw new Exception($"Insufficient stock for product '{product.ProductName}' (Variant: {variant.Sku}). Available: {variant.StockQuantity}");
+                    throw new Exception($"Không đủ tồn kho cho sản phẩm '{product.ProductName}' (Biến thể: {variant.Sku}). Còn lại: {variant.StockQuantity}");
 
                 if (variant.PriceOverride.HasValue)
                      finalPrice = variant.PriceOverride.Value;
@@ -114,7 +114,7 @@ public class OrderService : IOrderService
             {
                 // Handle Base Product
                 if (product.StockQuantity < itemDto.Quantity)
-                    throw new Exception($"Insufficient stock for product '{product.ProductName}'. Available: {product.StockQuantity}");
+                    throw new Exception($"Không đủ tồn kho cho sản phẩm '{product.ProductName}'. Còn lại: {product.StockQuantity}");
                 
                 product.StockQuantity -= itemDto.Quantity;
             }
@@ -289,13 +289,13 @@ public class OrderService : IOrderService
     public async Task UpdateStatusAsync(Guid id, Guid storeId, string status)
     {
          var order = await _db.Orders.FirstOrDefaultAsync(o => o.Id == id && o.StoreId == storeId);
-         if (order == null) throw new Exception("Order not found");
+         if (order == null) throw new Exception("Không tìm thấy đơn hàng");
 
          // Validate transition
          if (ValidTransitions.TryGetValue(order.Status ?? "Pending", out var allowed))
          {
              if (!allowed.Contains(status))
-                 throw new Exception($"Cannot change status from '{order.Status}' to '{status}'");
+                 throw new Exception($"Không thể chuyển trạng thái từ '{order.Status}' sang '{status}'");
          }
 
          // If cancelling, use CancelOrderAsync instead
@@ -319,10 +319,10 @@ public class OrderService : IOrderService
             .FirstOrDefaultAsync(o => o.Id == id && o.StoreId == storeId);
 
         if (order == null)
-            throw new Exception("Order not found");
+            throw new Exception("Không tìm thấy đơn hàng");
 
         if (order.Status == "Cancelled")
-            throw new Exception("Order is already cancelled");
+            throw new Exception("Đơn hàng đã được hủy rồi");
 
         // Restore stock for each item
         foreach (var item in order.OrderItems)

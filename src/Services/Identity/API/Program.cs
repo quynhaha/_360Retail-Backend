@@ -1,4 +1,5 @@
 ﻿using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Services.Identity.API.Hubs;
 using _360Retail.Shared.Common.Middleware;
 using _360Retail.Shared.Email;
 using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
@@ -9,6 +10,7 @@ using _360Retail.Services.Identity.Infrastructure.Services.Email;
 using _360Retail.Services.Identity.Infrastructure.Services.Invitations;
 using _360Retail.Services.Identity.Infrastructure.Services.SuperAdmin;
 using _360Retail.Services.Identity.Infrastructure.Services.UserStoreAccess;
+using _360Retail.Services.Identity.API.Services;
 using _360Retail.Services.Saas.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -16,10 +18,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Serilog;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ===== SERILOG =====
+builder.Host.UseSerilog((context, config) => config
+    .ReadFrom.Configuration(context.Configuration)
+    .Enrich.WithProperty("Service", "Identity")
+    .WriteTo.Console());
 
 #region ===== HTTP & EMAIL =====
 builder.Services.AddHttpClient();
@@ -60,6 +69,23 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 #endregion
 
+#region ===== REDIS CACHE =====
+var redisConn = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConn))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConn;
+        options.InstanceName = "360Retail_Identity_";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+builder.Services.AddSingleton<TokenBlacklistService>();
+#endregion
+
 #region ===== APPLICATION SERVICES =====
 
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -69,6 +95,10 @@ builder.Services.AddScoped<ISuperAdminUserService, SuperAdminUserService>();
 builder.Services.AddScoped<IUserInvitationService, UserInvitationService>();
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 builder.Services.AddScoped<IUserStoreAccessService, UserStoreAccessService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+
+// ===== SIGNALR =====
+builder.Services.AddSignalR();
 
 #endregion
 
@@ -94,6 +124,23 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         ClockSkew = TimeSpan.Zero
+    };
+
+    // Support SignalR: read JWT from query string for WebSocket connections
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/notifications/hub"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        }
     };
 });
 #endregion
@@ -136,6 +183,7 @@ builder.Services.AddSwaggerGen(option =>
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddHealthChecks();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -153,7 +201,10 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 #region ===== MIDDLEWARE =====
-// Global Exception Handler - must be first
+// Serilog request logging - must be first to see final status codes
+app.UseSerilogRequestLogging();
+
+// Global Exception Handler - converts exceptions to proper HTTP responses
 app.UseGlobalExceptionHandler();
 
 // Protect internal APIs with shared key
@@ -172,9 +223,12 @@ app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
+app.UseMiddleware<_360Retail.Services.Identity.API.Middleware.TokenBlacklistMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/notifications/hub");
+app.MapHealthChecks("/health");
 #endregion
 
 app.Run();

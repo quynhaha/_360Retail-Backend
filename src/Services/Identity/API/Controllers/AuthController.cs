@@ -1,5 +1,6 @@
 ﻿using _360Retail.Services.Identity.Application.DTOs;
 using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Services.Identity.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -13,10 +14,12 @@ namespace _360Retail.Services.Identity.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly TokenBlacklistService _tokenBlacklist;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, TokenBlacklistService tokenBlacklist)
         {
             _authService = authService;
+            _tokenBlacklist = tokenBlacklist;
         }
 
         // LOGIN
@@ -32,7 +35,29 @@ namespace _360Retail.Services.Identity.API.Controllers
         public async Task<IActionResult> Register(RegisterUserDto dto)
         {
             await _authService.RegisterAsync(dto);
-            return Ok(new { message = "Register successful" });
+            return Ok(new { message = "Đăng ký thành công. Vui lòng kiểm tra email để nhập mã OTP xác nhận." });
+        }
+
+        // VERIFY EMAIL (PUBLIC)
+        /// <summary>
+        /// Xác nhận email bằng mã OTP 6 chữ số
+        /// </summary>
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
+        {
+            await _authService.VerifyEmailAsync(dto.Email, dto.OtpCode);
+            return Ok(new { message = "Xác nhận email thành công. Bạn có thể đăng nhập ngay." });
+        }
+
+        // RESEND OTP (PUBLIC)
+        /// <summary>
+        /// Gửi lại mã OTP xác nhận email
+        /// </summary>
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpDto dto)
+        {
+            await _authService.ResendOtpAsync(dto.Email);
+            return Ok(new { message = "Nếu email hợp lệ, mã OTP mới đã được gửi." });
         }
 
         // ASSIGN STORE (INTERNAL/DEV)
@@ -131,6 +156,30 @@ namespace _360Retail.Services.Identity.API.Controllers
         {
             await _authService.ResetPasswordAsync(dto.Email, dto.ResetCode, dto.NewPassword);
             return Ok(new { message = "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại" });
+        }
+
+        /// <summary>
+        /// Logout — blacklist the current JWT token in Redis
+        /// </summary>
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var token = HttpContext.Request.Headers["Authorization"]
+                .ToString().Replace("Bearer ", "");
+
+            if (string.IsNullOrEmpty(token))
+                return BadRequest(new { message = "No token provided" });
+
+            // Parse token to get expiry
+            var handler = new JwtSecurityTokenHandler();
+            var jwt = handler.ReadJwtToken(token);
+            var remaining = jwt.ValidTo - DateTime.UtcNow;
+
+            if (remaining > TimeSpan.Zero)
+                await _tokenBlacklist.BlacklistAsync(token, remaining);
+
+            return Ok(new { message = "Logged out successfully" });
         }
 
     }

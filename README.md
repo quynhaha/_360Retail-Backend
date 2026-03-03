@@ -10,8 +10,8 @@
 
 ```
 ┌──────────────────────────────────────────────────┐
-│                  API Gateway (:5001)              │
-│                 (YARP Reverse Proxy)              │
+│              API Gateway (:5001)                  │
+│           (Ocelot + Rate Limiting)                │
 └──────┬───────┬───────┬───────┬───────┬───────────┘
        │       │       │       │       │
   ┌────▼──┐┌───▼──┐┌───▼──┐┌──▼───┐┌──▼───┐
@@ -31,19 +31,21 @@
 
 | Service | Port | Chức năng |
 |---------|------|-----------|
-| **API Gateway** | 5001 | YARP reverse proxy, routing |
+| **API Gateway** | 5001 | Ocelot reverse proxy, routing, rate limiting |
 | **Identity** | 5297 | JWT Auth, OAuth Google, User management, Role-based access |
-| **SaaS** | 5031 | Store management, Subscription lifecycle, VNPay payment |
-| **Sales** | 5091 | Products, Categories, Orders (POS), Stock management |
-| **HR** | 5280 | Employees, Timekeeping, Task management |
-| **CRM** | 5169 | Customer management, Loyalty points (auto-earn & rank) |
+| **SaaS** | 5031 | Store management, Subscription lifecycle, VNPay + SePay payment |
+| **Sales** | 5091 | Products, Categories, Orders (POS), Inventory, Dashboard |
+| **HR** | 5280 | Employees, Timekeeping (GPS), Task management |
+| **CRM** | 5169 | Customer management, Loyalty points (auto-earn & rank), Feedback |
 
 ### Service Communication
 
 | Luồng | Phương thức | Mô tả |
 |-------|------------|-------|
-| Saas → Identity | HTTP (Internal) | Activate subscription, Assign store |
+| Identity → SaaS | HTTP (Internal) | Tạo trial store, kiểm tra subscription |
+| SaaS → Identity | HTTP (Internal) | Activate subscription, assign store |
 | Sales → CRM | HTTP (Internal) | Auto-earn loyalty points after order |
+| Identity → HR | HTTP (Internal) | Tạo employee sau invite |
 | HR → Identity | HTTP (Internal) | Sync employee roles |
 
 ---
@@ -52,13 +54,17 @@
 
 - **Runtime:** .NET 8 / ASP.NET Core
 - **Database:** PostgreSQL 16
+- **Cache:** Redis (dashboard, token blacklist)
 - **ORM:** Entity Framework Core
 - **Auth:** JWT + Google OAuth 2.0
-- **Payment:** VNPay API v2.1.0
-- **Storage:** Cloudinary (product images)
-- **Gateway:** YARP Reverse Proxy
+- **Payment:** VNPay API v2.1.0 + SePay (QR chuyển khoản)
+- **AI:** Google Gemini API (chatbot)
+- **Storage:** Cloudinary (product images, selfie check-in)
+- **Real-time:** SignalR WebSocket (notifications)
+- **Gateway:** Ocelot (routing, rate limiting, Swagger aggregation)
 - **Container:** Docker + Docker Compose
 - **Email:** Resend API
+- **CI/CD:** GitHub Actions
 
 ---
 
@@ -86,7 +92,7 @@ Chỉnh sửa file `.env` với các giá trị thực:
 OAUTH_GOOGLE_CLIENT_ID=your_google_client_id
 OAUTH_GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-# Cloudinary (upload ảnh sản phẩm)
+# Cloudinary (upload ảnh sản phẩm + selfie)
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
@@ -94,6 +100,9 @@ CLOUDINARY_API_SECRET=your_api_secret
 # Resend (gửi email)
 RESEND_API_KEY=your_resend_api_key
 RESEND_FROM_EMAIL=noreply@yourdomain.com
+
+# Gemini AI (chatbot)
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ### 2. Khởi động toàn bộ
@@ -108,7 +117,7 @@ docker compose up --build
 
 | Service | URL |
 |---------|-----|
-| API Gateway | http://localhost:5001 |
+| API Gateway (Swagger) | http://localhost:5001 |
 | Identity Swagger | http://localhost:5297/swagger |
 | SaaS Swagger | http://localhost:5031/swagger |
 | Sales Swagger | http://localhost:5091/swagger |
@@ -133,10 +142,10 @@ Hệ thống sử dụng **1 Database chung** (`360RetailDB`) với các **schem
 | Schema | Module | Bảng chính |
 |--------|--------|-----------|
 | `identity` | Authentication | `app_users`, `app_roles`, `user_roles`, `user_store_access` |
-| `saas` | SaaS Platform | `stores`, `service_plans`, `subscriptions`, `payments` |
-| `sales` | Bán hàng | `products`, `categories`, `orders`, `order_items`, `product_variants` |
+| `saas` | SaaS Platform | `stores`, `service_plans`, `subscriptions`, `payments`, `plan_reviews` |
+| `sales` | Bán hàng | `products`, `categories`, `orders`, `order_items`, `product_variants`, `inventory_tickets` |
 | `hr` | Nhân sự | `employees`, `timekeepings`, `tasks` |
-| `crm` | Khách hàng | `customers`, `loyalty_rules`, `loyalty_transactions` |
+| `crm` | Khách hàng | `customers`, `loyalty_rules`, `loyalty_transactions`, `customer_feedbacks` |
 
 ---
 
@@ -147,22 +156,34 @@ Hệ thống sử dụng **1 Database chung** (`360RetailDB`) với các **schem
 - Google OAuth 2.0 login
 - Role-based: SuperAdmin, StoreOwner, Manager, Staff, Customer
 - Multi-store access control
+- Forgot/Reset password (6-digit code via email)
 
 ### 🏪 SaaS & Subscription
 - Trial 7 ngày → Paid plans (Basic, Pro, Yearly)
-- Thanh toán VNPay
+- **Bảng giá:** Basic 199k/th, Pro 499k/th, Yearly 4.99M/năm (tiết kiệm 17%)
+- Thanh toán qua **VNPay** (redirect) và **SePay** (QR chuyển khoản)
 - Auto-activate sau payment thành công
+- **Feature Gate:** `[RequiresFeature]` — chặn tính năng theo gói subscription
+- Subscription expiry notifications (email)
+- Plan reviews & ratings
+- **AI Chatbot:** Hybrid FAQ + Google Gemini hỗ trợ khách hàng
 
 ### 🛒 Sales (POS)
 - Quản lý sản phẩm + biến thể (size, color, SKU)
+- Upload ảnh sản phẩm (Cloudinary)
 - Tạo đơn hàng POS với auto-deduct stock
 - Cancel order + restore stock tự động
-- Phân quyền: Customer chỉ xem đơn của mình
+- Inventory management (import/export tickets)
+- Dashboard analytics (revenue, top products, order status)
+- **Export Excel** (báo cáo doanh thu, top sản phẩm)
+- Low stock email alerts
+- **Redis caching** (dashboard, products)
 
 ### 👥 HR
-- Quản lý nhân viên + Face data
-- Chấm công GPS + ảnh check-in
-- Giao việc với deadline + priority
+- Quản lý nhân viên + Avatar upload
+- Chấm công GPS + **upload selfie** (Cloudinary)
+- Giao việc với deadline + priority + status tracking
+- **Export Excel** báo cáo chấm công
 
 ### 💎 CRM & Loyalty
 - Quản lý khách hàng (phone unique per store)
@@ -170,6 +191,24 @@ Hệ thống sử dụng **1 Database chung** (`360RetailDB`) với các **schem
 - **Auto-rank** upgrade: Bronze → Silver → Gold → Platinum
 - 3 loại rule: % order value, fixed/order, per quantity
 - Đổi điểm (redeem) + lịch sử giao dịch
+- Customer feedback (public QR + staff-entered)
+
+### 💰 Phân quyền tính năng theo gói
+
+| Tính năng | Trial | Basic | Pro | Yearly |
+|-----------|:-----:|:-----:|:---:|:------:|
+| Bán hàng cơ bản | ✅ | ✅ | ✅ | ✅ |
+| Dashboard & Báo cáo | ❌ | ✅ | ✅ | ✅ |
+| Tasks & Giao việc | ❌ | ✅ | ✅ | ✅ |
+| Phiếu kho nâng cao | ❌ | ✅ | ✅ | ✅ |
+| Mời nhân viên | ❌ | ✅ | ✅ | ✅ |
+| Thông báo realtime | ❌ | ✅ | ✅ | ✅ |
+| Chấm công GPS | ❌ | ❌ | ✅ | ✅ |
+| CRM & Loyalty | ❌ | ❌ | ✅ | ✅ |
+| Export Excel | ❌ | ❌ | ✅ | ✅ |
+| Multi-store | ❌ | ❌ | ✅ | ✅ |
+| Max nhân viên | 3 | 10 | 20 | 50 |
+| Max sản phẩm | 50 | 200 | ∞ | ∞ |
 
 ---
 
@@ -178,15 +217,21 @@ Hệ thống sử dụng **1 Database chung** (`360RetailDB`) với các **schem
 ```
 _360Retail-Backend/
 ├── src/
-│   ├── ApiGateway/              # YARP Reverse Proxy
+│   ├── ApiGateway/              # Ocelot Gateway + Rate Limiting
 │   ├── Services/
 │   │   ├── Identity/            # Auth, JWT, OAuth, Users
-│   │   ├── Saas/                # Stores, Subscriptions, VNPay
-│   │   ├── Sales/               # Products, Orders, POS
+│   │   ├── Saas/                # Stores, Subscriptions, VNPay + SePay
+│   │   ├── Sales/               # Products, Orders, POS, Dashboard
 │   │   ├── HR/                  # Employees, Timekeeping, Tasks
-│   │   └── CRM/                 # Customers, Loyalty, Points
-│   └── Shared/                  # Common middleware, utilities
+│   │   └── CRM/                 # Customers, Loyalty, Feedback
+│   └── Shared/                  # Common middleware, email, filters
 ├── tests/                       # Unit & Integration tests
+│   └── Services/
+│       ├── Identity/            # Auth tests (10)
+│       ├── Sales/               # Order tests (6)
+│       ├── Saas/                # Subscription tests (11)
+│       └── CRM/                 # Loyalty tests (2)
+├── .github/workflows/           # CI/CD pipelines
 ├── init-db/                     # SQL init scripts (auto-run)
 ├── docker-compose.yml
 └── .env.example
@@ -197,11 +242,33 @@ _360Retail-Backend/
 ## 🧪 Chạy Tests
 
 ```bash
-cd tests/Services/CRM/CRM.Loyalty.Tests
-dotnet test --verbosity normal
+# Chạy toàn bộ tests (29 tests)
+dotnet test 360Retail.sln --verbosity normal
+
+# Chạy test riêng từng service
+dotnet test tests/Services/Identity/Identity.Auth.Tests
+dotnet test tests/Services/Sales/Sales.Orders.Tests
+dotnet test tests/Services/Saas/Saas.Subscription.Tests
+dotnet test tests/Services/CRM/CRM.Loyalty.Tests
 ```
 
-> **Lưu ý:** Tests sử dụng [Testcontainers](https://dotnet.testcontainers.org/) nên cần Docker đang chạy.
+> **CI/CD:** Tests tự động chạy khi push/PR vào `main` hoặc `develop` qua GitHub Actions.
+
+---
+
+## 🛡️ Rate Limiting
+
+API Gateway (Ocelot) có rate limiting cho tất cả routes:
+
+| Route | Limit | Mục đích |
+|-------|-------|----------|
+| `/identity/*` | 30 req/s | Chống brute-force login |
+| `/saas/*` | 100 req/s | CRUD operations |
+| `/sales/*` | 100 req/s | POS operations |
+| `/hr/*` | 100 req/s | HR operations |
+| `/crm/*` | 100 req/s | CRM operations |
+
+Khi vượt giới hạn → HTTP `429 Too Many Requests`
 
 ---
 
@@ -211,4 +278,4 @@ dotnet test --verbosity normal
 
 ---
 
-*Last updated: 25/02/2026*
+*Last updated: 01/03/2026*
