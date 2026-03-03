@@ -133,7 +133,7 @@ public class SubscriptionServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<Exception>(
             () => _sut.CreatePendingPaymentAsync(store.Id, Guid.NewGuid(), Guid.NewGuid())
         );
-        Assert.Equal("Service plan not found", ex.Message);
+        Assert.Equal("Không tìm thấy gói dịch vụ", ex.Message);
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public class SubscriptionServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<Exception>(
             () => _sut.CreatePendingPaymentAsync(store.Id, plan.Id, Guid.NewGuid())
         );
-        Assert.Equal("This plan is not available", ex.Message);
+        Assert.Equal("Gói dịch vụ không khả dụng", ex.Message);
     }
 
     // ============ ACTIVATE SUBSCRIPTION ============
