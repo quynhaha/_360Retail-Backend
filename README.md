@@ -207,8 +207,10 @@ Hệ thống sử dụng **1 Database chung** (`360RetailDB`) với các **schem
 | CRM & Loyalty | ❌ | ❌ | ✅ | ✅ |
 | Export Excel | ❌ | ❌ | ✅ | ✅ |
 | Multi-store | ❌ | ❌ | ✅ | ✅ |
+| Biến thể sản phẩm | ❌ | ✅ | ✅ | ✅ |
 | Max nhân viên | 1 | 10 | 20 | 50 |
 | Max sản phẩm | 50 | 200 | ∞ | ∞ |
+| Max đơn/tháng | 100 | 500 | 2,000 | ∞ |
 
 ---
 
@@ -278,4 +280,4 @@ Khi vượt giới hạn → HTTP `429 Too Many Requests`
 
 ---
 
-*Last updated: 01/03/2026*
+*Last updated: 04/03/2026*

@@ -1,7 +1,7 @@
 # 360Retail - Hướng Dẫn Sử Dụng API
 
 > **Tài liệu hướng dẫn thực hành cho Frontend Team**  
-> Cập nhật: 28/02/2026  
+> Cập nhật: 04/03/2026  
 > **Swagger UI**: http://localhost:5001/swagger (khi Docker đang chạy)
 
 ---
@@ -77,10 +77,10 @@
 | 41 | DELETE | `/sales/categories/{id}` | ✅ Manager+ | Xóa danh mục |
 | 42 | GET | `/sales/products` | ✅ | DS sản phẩm |
 | 43 | GET | `/sales/products/{id}` | ✅ | Chi tiết sản phẩm |
-| 44 | POST | `/sales/products` | ✅ Manager+ | Tạo sản phẩm |
+| 44 | POST | `/sales/products` | ✅ Manager+ | Tạo sản phẩm (Trial: max 50, Basic: 200, Pro/Yearly: ∞. Variant chỉ từ Basic+) |
 | 45 | PUT | `/sales/products/{id}` | ✅ Manager+ | Sửa sản phẩm |
 | 46 | DELETE | `/sales/products/{id}` | ✅ Manager+ | Xóa sản phẩm |
-| 47 | POST | `/sales/orders` | ✅ Staff+ | Tạo đơn hàng (POS) |
+| 47 | POST | `/sales/orders` | ✅ Staff+ | Tạo đơn hàng POS (Trial: 100/tháng, Basic: 500, Pro: 2000, Yearly: ∞) |
 | 48 | GET | `/sales/orders` | ✅ | DS đơn hàng |
 | 49 | GET | `/sales/orders/{id}` | ✅ | Chi tiết đơn hàng |
 | 50 | PUT | `/sales/orders/{id}/status` | ✅ Manager+ | Đổi trạng thái đơn |
