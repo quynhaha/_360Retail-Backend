@@ -4,7 +4,10 @@ using _360Retail.Services.Sales.Domain.Entities;
 using _360Retail.Services.Sales.Infrastructure.Persistence;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Npgsql;
+using System.Text.Json;
 
 namespace _360Retail.Services.Sales.Infrastructure.Services
 {
@@ -14,13 +17,15 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
         private readonly IMapper _mapper;
         private readonly IStorageService _storageService;
         private readonly ILogger<ProductService> _logger;
+        private readonly IConfiguration _config;
 
-        public ProductService(SalesDbContext context, IMapper mapper, IStorageService storageService, ILogger<ProductService> logger)
+        public ProductService(SalesDbContext context, IMapper mapper, IStorageService storageService, ILogger<ProductService> logger, IConfiguration config)
         {
             _context = context;
             _mapper = mapper;
             _storageService = storageService;
             _logger = logger;
+            _config = config;
         }
 
         public async Task<Guid> CreateAsync(CreateProductDto request, Guid storeId)
@@ -30,6 +35,30 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
             
             _logger.LogDebug("CreateAsync - VariantsJson: {VariantsJson}, Parsed {Count} variants for product: {ProductName}",
                 request.VariantsJson ?? "(null)", variantDtos.Count, request.ProductName);
+
+            // === PLAN LIMIT CHECKS ===
+            var planFeatures = await GetPlanFeaturesForStoreAsync(storeId);
+            if (planFeatures != null)
+            {
+                // Check max_products
+                if (planFeatures.TryGetValue("max_products", out var maxProd) && maxProd.ValueKind == JsonValueKind.Number)
+                {
+                    var maxProducts = maxProd.GetInt32();
+                    if (maxProducts > 0) // -1 = unlimited
+                    {
+                        var currentCount = await _context.Products.CountAsync(p => p.StoreId == storeId && p.IsActive);
+                        if (currentCount >= maxProducts)
+                            throw new Exception($"Đã đạt giới hạn {maxProducts} sản phẩm của gói hiện tại. Vui lòng nâng cấp gói để thêm sản phẩm.");
+                    }
+                }
+
+                // Check has_variants
+                if (variantDtos.Count > 0)
+                {
+                    if (planFeatures.TryGetValue("has_variants", out var hasVar) && hasVar.ValueKind == JsonValueKind.False)
+                        throw new Exception("Tính năng biến thể sản phẩm không khả dụng trong gói hiện tại. Vui lòng nâng cấp lên gói Basic hoặc cao hơn.");
+                }
+            }
 
             // 1. Check Category thuộc Store
             var categoryExists = await _context.Categories.AnyAsync(c =>
@@ -257,6 +286,36 @@ namespace _360Retail.Services.Sales.Infrastructure.Services
             // _context.Products.Remove(product);
             product.IsActive = false;  // Soft delete
             await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Query saas schema to get plan features for a store's active subscription
+        /// </summary>
+        private async Task<Dictionary<string, JsonElement>?> GetPlanFeaturesForStoreAsync(Guid storeId)
+        {
+            try
+            {
+                var connStr = _config["ConnectionStrings:DefaultConnection"];
+                if (string.IsNullOrEmpty(connStr)) return null;
+
+                await using var conn = new NpgsqlConnection(connStr);
+                await conn.OpenAsync();
+                var sql = @"SELECT sp.features FROM saas.subscriptions s
+                    JOIN saas.service_plans sp ON s.plan_id = sp.id
+                    WHERE s.store_id = @sid AND s.status IN ('Active','Trial')
+                    AND (s.end_date IS NULL OR s.end_date > NOW())
+                    ORDER BY s.end_date DESC LIMIT 1";
+                await using var cmd = new NpgsqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@sid", storeId);
+                var result = await cmd.ExecuteScalarAsync();
+                if (result is string json)
+                    return JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to get plan features for store {StoreId}", storeId);
+            }
+            return null;
         }
     }
 }

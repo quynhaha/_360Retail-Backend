@@ -4,7 +4,10 @@ using _360Retail.Services.Sales.Domain.Entities;
 using _360Retail.Services.Sales.Infrastructure.HttpClients;
 using _360Retail.Services.Sales.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Npgsql;
+using System.Text.Json;
 
 namespace _360Retail.Services.Sales.Infrastructure.Services;
 
@@ -13,18 +16,35 @@ public class OrderService : IOrderService
     private readonly SalesDbContext _db;
     private readonly ICrmClient _crmClient;
     private readonly ILogger<OrderService> _logger;
+    private readonly IConfiguration _config;
 
-    public OrderService(SalesDbContext db, ICrmClient crmClient, ILogger<OrderService> logger)
+    public OrderService(SalesDbContext db, ICrmClient crmClient, ILogger<OrderService> logger, IConfiguration config)
     {
         _db = db;
         _crmClient = crmClient;
         _logger = logger;
+        _config = config;
     }
 
     private class IdWrapper { public Guid Id { get; set; } }
 
     public async Task<Guid> CreateAsync(CreateOrderDto dto, Guid storeId, Guid userId)
     {
+        // === PLAN LIMIT: max_orders ===
+        var planFeatures = await GetPlanFeaturesForStoreAsync(storeId);
+        if (planFeatures != null && planFeatures.TryGetValue("max_orders", out var maxOrd) && maxOrd.ValueKind == JsonValueKind.Number)
+        {
+            var maxOrders = maxOrd.GetInt32();
+            if (maxOrders > 0) // -1 = unlimited
+            {
+                var currentMonth = DateTime.UtcNow;
+                var startOfMonth = new DateTime(currentMonth.Year, currentMonth.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+                var orderCount = await _db.Orders.CountAsync(o => o.StoreId == storeId && o.CreatedAt >= startOfMonth);
+                if (orderCount >= maxOrders)
+                    throw new Exception($"Đã đạt giới hạn {maxOrders} đơn hàng/tháng của gói hiện tại. Vui lòng nâng cấp gói để tạo thêm đơn hàng.");
+            }
+        }
+
         // 1. Resolve EmployeeId from UserId if available (Staff/POS flow)
         var employeeWrapper = await _db.Database
             .SqlQueryRaw<IdWrapper>(
@@ -349,5 +369,31 @@ public class OrderService : IOrderService
     {
         // Simple generation: ORD-YYMMDD-RANDOM
         return "ORD-" + DateTime.UtcNow.ToString("yyMMdd") + "-" + new Random().Next(1000, 9999);
+    }
+
+    private async Task<Dictionary<string, JsonElement>?> GetPlanFeaturesForStoreAsync(Guid storeId)
+    {
+        try
+        {
+            var connStr = _config["ConnectionStrings:DefaultConnection"];
+            if (string.IsNullOrEmpty(connStr)) return null;
+            await using var conn = new NpgsqlConnection(connStr);
+            await conn.OpenAsync();
+            var sql = @"SELECT sp.features FROM saas.subscriptions s
+                JOIN saas.service_plans sp ON s.plan_id = sp.id
+                WHERE s.store_id = @sid AND s.status IN ('Active','Trial')
+                AND (s.end_date IS NULL OR s.end_date > NOW())
+                ORDER BY s.end_date DESC LIMIT 1";
+            await using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@sid", storeId);
+            var result = await cmd.ExecuteScalarAsync();
+            if (result is string json)
+                return JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get plan features for store {StoreId}", storeId);
+        }
+        return null;
     }
 }
