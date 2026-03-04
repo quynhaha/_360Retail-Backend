@@ -14,6 +14,7 @@ namespace _360Retail.Services.HR.API.Controllers;
 [Route("api/timekeeping")]
 [Authorize]
 [RequiresActiveSubscription]
+[_360Retail.Shared.Filters.RequiresFeature("has_gps_checkin")]
 public class TimekeepingController : ControllerBase
 {
     private readonly ITimekeepingService _timekeepingService;
