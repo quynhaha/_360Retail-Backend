@@ -56,6 +56,8 @@ services:
       - Resend__FromEmail=${RESEND_FROM_EMAIL}
       # Redis Cache
       - ConnectionStrings__Redis=redis:6379
+      # CORS Origins (comma-separated)
+      - CorsOrigins=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:4200}
     ports:
       - "5297:8080"
     depends_on:
@@ -86,6 +88,11 @@ services:
       - SePay__AccountName=${SEPAY_ACCOUNT_NAME}
       # Gemini AI (Chatbot)
       - Gemini__ApiKey=${GEMINI_API_KEY}
+      # VNPay (Payment Gateway)
+      - VNPay__TmnCode=${VNPAY_TMN_CODE}
+      - VNPay__HashSecret=${VNPAY_HASH_SECRET}
+      # CORS Origins (comma-separated)
+      - CorsOrigins=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:4200}
     ports:
       - "5031:8080"
     depends_on:
@@ -113,6 +120,8 @@ services:
       # Resend (Email Service)
       - Resend__ApiKey=${RESEND_API_KEY}
       - Resend__FromEmail=${RESEND_FROM_EMAIL}
+      # CORS Origins (comma-separated)
+      - CorsOrigins=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:4200}
     ports:
       - "5091:8080"
     depends_on:
@@ -140,6 +149,8 @@ services:
       # Resend (Email Service)
       - Resend__ApiKey=${RESEND_API_KEY}
       - Resend__FromEmail=${RESEND_FROM_EMAIL}
+      # CORS Origins (comma-separated)
+      - CorsOrigins=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:4200}
     ports:
       - "5280:8080"
     depends_on:
@@ -159,6 +170,8 @@ services:
       - JwtSettings__Issuer=360Retail_Identity
       - JwtSettings__Audience=360Retail_Users
       - InternalApi__Key=${INTERNAL_API_KEY:-360retail-internal-secret-key-2026}
+      # CORS Origins (comma-separated)
+      - CorsOrigins=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:4200}
     ports:
       - "5169:8080"
     depends_on:

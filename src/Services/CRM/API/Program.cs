@@ -22,6 +22,22 @@ builder.Host.UseSerilog((context, config) => config
     .Enrich.WithProperty("Service", "CRM")
     .WriteTo.Console());
 
+// Add CORS - read origins from config (overridable via env var)
+var corsOrigins = builder.Configuration["CorsOrigins"]?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+    ?? new[] { "http://localhost:3000", "http://localhost:5173", "http://localhost:4200" };
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy.WithOrigins(corsOrigins)
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+});
+
 // Add services to the container.
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -122,6 +138,7 @@ app.UseSerilogRequestLogging();
 app.UseGlobalExceptionHandler();
 
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
