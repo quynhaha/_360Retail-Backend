@@ -201,13 +201,13 @@ Hệ thống sử dụng **1 Database chung** (`360RetailDB`) với các **schem
 | Dashboard & Báo cáo | ❌ | ✅ | ✅ | ✅ |
 | Tasks & Giao việc | ❌ | ✅ | ✅ | ✅ |
 | Phiếu kho nâng cao | ❌ | ✅ | ✅ | ✅ |
-| Mời nhân viên | ❌ | ✅ | ✅ | ✅ |
+| Mời nhân viên | ✅ (1 người) | ✅ | ✅ | ✅ |
 | Thông báo realtime | ❌ | ✅ | ✅ | ✅ |
 | Chấm công GPS | ❌ | ❌ | ✅ | ✅ |
 | CRM & Loyalty | ❌ | ❌ | ✅ | ✅ |
 | Export Excel | ❌ | ❌ | ✅ | ✅ |
 | Multi-store | ❌ | ❌ | ✅ | ✅ |
-| Max nhân viên | 3 | 10 | 20 | 50 |
+| Max nhân viên | 1 | 10 | 20 | 50 |
 | Max sản phẩm | 50 | 200 | ∞ | ∞ |
 
 ---

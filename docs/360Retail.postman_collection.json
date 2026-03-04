@@ -417,7 +417,7 @@
                                 "invite"
                             ]
                         },
-                        "description": "Mời nhân viên vào store. Role: `Staff` hoặc `Manager`.\n\n**Quy trình**:\n1. Owner gọi endpoint này\n2. Hệ thống tạo tài khoản + gán role\n3. Staff login bằng email + password mặc định (`ChangeMe@123`)\n4. Staff đổi password lần đầu"
+                        "description": "Mời nhân viên vào store. Role: `Staff` hoặc `Manager`.\n\n**Giới hạn theo gói:**\n- Trial: tối đa 1 nhân viên\n- Basic: tối đa 10\n- Pro: tối đa 20\n- Yearly: tối đa 50\n\n**Quy trình**:\n1. Owner gọi endpoint này\n2. Hệ thống tạo tài khoản + gán role\n3. Staff login bằng email + temp password (gửi qua email)\n4. Staff đổi password lần đầu\n\n**Error 400**: `Đã đạt giới hạn N nhân viên của gói hiện tại`"
                     }
                 },
                 {

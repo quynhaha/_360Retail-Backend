@@ -326,7 +326,7 @@ public class AuthService : IAuthService
                 return true;
             }
 
-            return result.Status != "Active";
+            return result.Status != "Active" && result.Status != "Trial";
         }
         catch
         {
