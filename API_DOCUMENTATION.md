@@ -26,7 +26,7 @@
 | 7 | POST | `/identity/auth/refresh-access` | ✅ | Refresh token (đổi store context) |
 | 8 | POST | `/identity/subscription/start-trial` | ✅ | Bắt đầu Trial 7 ngày |
 | 9 | GET | `/identity/subscription/status` | ✅ | Trạng thái subscription |
-| 10 | POST | `/identity/staff/invite` | ✅ Owner | Mời nhân viên vào store |
+| 10 | POST | `/identity/staff/invite` | ✅ Owner | Mời nhân viên vào store (Trial: max 1, Basic: 10, Pro: 20, Yearly: 50) |
 | 11 | GET | `/identity/user-stores/stores-my` | ✅ | Danh sách store của tôi |
 | 12 | GET | `/identity/admin/users` | SuperAdmin | Danh sách tất cả users |
 | 13 | GET | `/identity/admin/users/{id}` | SuperAdmin | Chi tiết 1 user |
@@ -542,6 +542,17 @@ POST /identity/staff/invite
 }
 ```
 → Email được gửi với password tạm thời
+
+> ⚠️ **Giới hạn nhân viên theo gói:**
+>
+> | Gói | Max nhân viên |
+> |-----|:---:|
+> | Trial | 1 |
+> | Basic | 10 |
+> | Pro | 20 |
+> | Yearly | 50 |
+>
+> Nếu đã đạt giới hạn → Error 500: `"Đã đạt giới hạn N nhân viên của gói hiện tại"`
 
 ### 6.2: Xem & giao việc
 
