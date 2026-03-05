@@ -203,6 +203,7 @@ services:
     container_name: 360retail-api-gateway
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - CorsOrigins=${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173,http://localhost:4200}
     ports:
       - "5001:8080"
     depends_on:
