@@ -1,7 +1,7 @@
 # 360Retail - Hướng Dẫn Sử Dụng API
 
 > **Tài liệu hướng dẫn thực hành cho Frontend Team**  
-> Cập nhật: 28/02/2026  
+> Cập nhật: 04/03/2026  
 > **Swagger UI**: http://localhost:5001/swagger (khi Docker đang chạy)
 
 ---
@@ -26,7 +26,7 @@
 | 7 | POST | `/identity/auth/refresh-access` | ✅ | Refresh token (đổi store context) |
 | 8 | POST | `/identity/subscription/start-trial` | ✅ | Bắt đầu Trial 7 ngày |
 | 9 | GET | `/identity/subscription/status` | ✅ | Trạng thái subscription |
-| 10 | POST | `/identity/staff/invite` | ✅ Owner | Mời nhân viên vào store |
+| 10 | POST | `/identity/staff/invite` | ✅ Owner | Mời nhân viên vào store (Trial: max 1, Basic: 10, Pro: 20, Yearly: 50) |
 | 11 | GET | `/identity/user-stores/stores-my` | ✅ | Danh sách store của tôi |
 | 12 | GET | `/identity/admin/users` | SuperAdmin | Danh sách tất cả users |
 | 13 | GET | `/identity/admin/users/{id}` | SuperAdmin | Chi tiết 1 user |
@@ -55,6 +55,7 @@
 | 28b | GET | `/saas/payments/initiate?provider=sepay` | ✅ | Tạo QR chuyển khoản (SePay) |
 | 29 | GET | `/saas/payments/vnpay-return` | ❌ | VNPay callback |
 | 29b | POST | `/saas/payments/sepay-webhook` | ❌ | SePay IPN webhook |
+| 29c | GET | `/saas/payments/{paymentId}/status` | ✅ | Check trạng thái payment (FE polling) |
 | 30 | POST | `/saas/plan-reviews` | ✅ Owner | Tạo đánh giá gói đã mua |
 | 31 | GET | `/saas/plan-reviews/me/{planId}` | ✅ | Xem review của tôi |
 | 32 | GET | `/saas/plan-reviews/plan/{planId}` | ❌ | DS reviews 1 gói (public) |
@@ -76,10 +77,10 @@
 | 41 | DELETE | `/sales/categories/{id}` | ✅ Manager+ | Xóa danh mục |
 | 42 | GET | `/sales/products` | ✅ | DS sản phẩm |
 | 43 | GET | `/sales/products/{id}` | ✅ | Chi tiết sản phẩm |
-| 44 | POST | `/sales/products` | ✅ Manager+ | Tạo sản phẩm |
+| 44 | POST | `/sales/products` | ✅ Manager+ | Tạo sản phẩm (Trial: max 50, Basic: 200, Pro/Yearly: ∞. Variant chỉ từ Basic+) |
 | 45 | PUT | `/sales/products/{id}` | ✅ Manager+ | Sửa sản phẩm |
 | 46 | DELETE | `/sales/products/{id}` | ✅ Manager+ | Xóa sản phẩm |
-| 47 | POST | `/sales/orders` | ✅ Staff+ | Tạo đơn hàng (POS) |
+| 47 | POST | `/sales/orders` | ✅ Staff+ | Tạo đơn hàng POS (Trial: 100/tháng, Basic: 500, Pro: 2000, Yearly: ∞) |
 | 48 | GET | `/sales/orders` | ✅ | DS đơn hàng |
 | 49 | GET | `/sales/orders/{id}` | ✅ | Chi tiết đơn hàng |
 | 50 | PUT | `/sales/orders/{id}/status` | ✅ Manager+ | Đổi trạng thái đơn |
@@ -382,6 +383,33 @@ FE hiển thị:
 - `bankInfo` → hiển thị thông tin CK thủ công
 - `paymentCode` → nội dung CK (bắt buộc đúng để SePay nhận diện)
 
+### Bước 2.3b: Polling trạng thái thanh toán (SePay)
+
+Sau khi hiển thị QR, FE gọi polling mỗi **5-10 giây** để check trạng thái:
+
+```
+GET /saas/payments/{paymentId}/status
+```
+→ Response:
+```json
+{
+  "success": true,
+  "paymentId": "xxx",
+  "status": "Pending",
+  "amount": 199000,
+  "paymentDate": null,
+  "transactionCode": null
+}
+```
+
+| Status | Ý nghĩa | FE action |
+|--------|---------|----------|
+| `Pending` | Chưa nhận được tiền | Tiếp tục polling |
+| `Completed` | Đã thanh toán ✅ | Chuyển trang thành công |
+| `Failed` | Thất bại | Hiển thị lỗi |
+
+> ⚠️ FE nên dừng polling sau **5 phút** (60 lần × 5s) và hiển thị "Vui lòng kiểm tra lại sau".
+
 ### Bước 2.4: Refresh Token sau thanh toán
 ```
 POST /identity/auth/refresh-access
@@ -514,6 +542,17 @@ POST /identity/staff/invite
 }
 ```
 → Email được gửi với password tạm thời
+
+> ⚠️ **Giới hạn nhân viên theo gói:**
+>
+> | Gói | Max nhân viên |
+> |-----|:---:|
+> | Trial | 1 |
+> | Basic | 10 |
+> | Pro | 20 |
+> | Yearly | 50 |
+>
+> Nếu đã đạt giới hạn → Error 500: `"Đã đạt giới hạn N nhân viên của gói hiện tại"`
 
 ### 6.2: Xem & giao việc
 

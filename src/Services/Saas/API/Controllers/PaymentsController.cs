@@ -145,6 +145,29 @@ public class PaymentsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Check payment status — FE polls this after showing QR code
+    /// Returns: Pending, Completed, Failed, Expired
+    /// </summary>
+    [HttpGet("{paymentId}/status")]
+    public async Task<IActionResult> GetPaymentStatus(Guid paymentId)
+    {
+        var payment = await _subscriptionService.GetPaymentByIdAsync(paymentId);
+
+        if (payment == null)
+            return NotFound(new { success = false, message = "Payment not found" });
+
+        return Ok(new
+        {
+            success = true,
+            paymentId = payment.Id,
+            status = payment.Status,
+            amount = payment.Amount,
+            paymentDate = payment.PaymentDate,
+            transactionCode = payment.TransactionCode
+        });
+    }
+
     private static string GetVNPayErrorMessage(string responseCode)
     {
         return responseCode switch

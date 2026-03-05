@@ -45,6 +45,18 @@ public class UserInvitationService : IUserInvitationService
         if (role == null)
             throw new Exception($"Không tìm thấy vai trò '{dto.Role}'");
 
+        // Check max_employees limit from store's subscription plan
+        var currentStaffCount = await _db.UserStoreAccess
+            .CountAsync(x => x.StoreId == dto.StoreId && x.RoleInStore != "Owner");
+
+        var maxEmployees = await GetMaxEmployeesForStoreAsync(dto.StoreId);
+        if (maxEmployees.HasValue && currentStaffCount >= maxEmployees.Value)
+        {
+            throw new Exception(
+                $"Đã đạt giới hạn {maxEmployees.Value} nhân viên của gói hiện tại. " +
+                $"Vui lòng nâng cấp gói để mời thêm nhân viên.");
+        }
+
         var tempPassword = GenerateTempPassword();
 
         var user = new AppUser
@@ -124,5 +136,43 @@ public class UserInvitationService : IUserInvitationService
     private static string GenerateTempPassword()
     {
         return $"Tmp@{Random.Shared.Next(100000, 999999)}";
+    }
+
+    /// <summary>
+    /// Query Saas DB (cross-schema) for max_employees from store's active plan
+    /// </summary>
+    private async Task<int?> GetMaxEmployeesForStoreAsync(Guid storeId)
+    {
+        try
+        {
+            // Cross-schema query: identity service → saas schema
+            var result = await _db.Database
+                .SqlQueryRaw<string>(@"
+                    SELECT sp.features::text AS ""Value""
+                    FROM saas.subscriptions s
+                    JOIN saas.service_plans sp ON s.plan_id = sp.id
+                    WHERE s.store_id = {0}
+                      AND (s.status = 'Active' OR s.status = 'Trial')
+                      AND (s.end_date IS NULL OR s.end_date > NOW())
+                    ORDER BY s.end_date DESC
+                    LIMIT 1", storeId)
+                .FirstOrDefaultAsync();
+
+            if (result == null) return null;
+
+            var features = System.Text.Json.JsonSerializer.Deserialize<
+                Dictionary<string, System.Text.Json.JsonElement>>(result);
+
+            if (features != null && features.TryGetValue("max_employees", out var maxEmp))
+            {
+                return maxEmp.GetInt32();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to check max_employees for store {StoreId}", storeId);
+        }
+
+        return null; // No limit if query fails (fail-open)
     }
 }

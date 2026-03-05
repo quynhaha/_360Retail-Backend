@@ -21,6 +21,8 @@ public partial class Customer
 
     public Guid? StoreId { get; set; }
 
+    public bool IsDeleted { get; set; } = false;
+
     public virtual ICollection<CustomerFeedback> CustomerFeedbacks { get; set; } = new List<CustomerFeedback>();
 
     public virtual ICollection<LoyaltyHistory> LoyaltyHistories { get; set; } = new List<LoyaltyHistory>();

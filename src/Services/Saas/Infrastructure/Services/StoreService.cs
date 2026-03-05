@@ -3,6 +3,7 @@ using _360Retail.Services.Saas.Application.DTOs.Stores;
 using _360Retail.Services.Saas.Domain.Entities;
 using _360Retail.Services.Saas.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace _360Retail.Services.Saas.Infrastructure.Services;
 
@@ -37,6 +38,30 @@ public class StoreService : IStoreService
     // CREATE WITH SUBSCRIPTION (for paid users creating new stores)
     public async Task<CreateStoreWithSubscriptionResult> CreateWithSubscriptionAsync(Guid ownerUserId, CreateStoreDto dto)
     {
+        // === PLAN LIMIT: has_multi_store ===
+        // Check if user already has a store → if so, check if plan allows multi-store
+        var existingStoreCount = await _db.Stores.CountAsync(s => s.IsActive);
+        if (existingStoreCount > 0)
+        {
+            // Get features from any existing active subscription for the user's stores
+            var existingSub = await _db.Subscriptions
+                .Include(s => s.Plan)
+                .Where(s => s.Status == "Active" || s.Status == "Trial")
+                .OrderByDescending(s => s.EndDate)
+                .FirstOrDefaultAsync();
+
+            if (existingSub?.Plan?.Features != null)
+            {
+                try
+                {
+                    var features = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(existingSub.Plan.Features);
+                    if (features != null && features.TryGetValue("has_multi_store", out var multiStore) && multiStore.ValueKind == JsonValueKind.False)
+                        throw new Exception("Tính năng quản lý đa cửa hàng không khả dụng trong gói hiện tại. Vui lòng nâng cấp lên gói Pro hoặc cao hơn.");
+                }
+                catch (JsonException) { /* ignore parse errors */ }
+            }
+        }
+
         // Create the store first
         var store = new Store
         {

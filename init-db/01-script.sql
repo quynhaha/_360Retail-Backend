@@ -564,7 +564,8 @@ CREATE INDEX IF NOT EXISTS "IX_loyalty_transactions_CustomerId" ON crm.loyalty_t
 ALTER TABLE crm.customers
 ADD COLUMN IF NOT EXISTS last_purchase_date TIMESTAMP,
 ADD COLUMN IF NOT EXISTS rank VARCHAR(50),
-ADD COLUMN IF NOT EXISTS zalo_id VARCHAR(100);
+ADD COLUMN IF NOT EXISTS zalo_id VARCHAR(100),
+ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
 
 -- 26/2/2026: Inventory Management - Update inventory_tickets table
 ALTER TABLE sales.inventory_tickets
@@ -647,13 +648,13 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user
 ON identity.notifications(user_id, is_read, created_at DESC);
 
 -- 01/03/2026: Update service plans with feature flags for tier differentiation
--- Trial: chỉ bán hàng cơ bản
+-- Trial: bán hàng cơ bản + 1 nhân viên
 UPDATE saas.service_plans SET features = '{
-  "max_products": 50, "max_employees": 3, "max_orders": 100,
+  "max_products": 50, "max_employees": 1, "max_orders": 100,
   "has_variants": false, "has_dashboard": false,
   "has_gps_checkin": false, "has_tasks": false,
   "has_feedback_qr": false, "has_loyalty": false,
-  "has_export_excel": false, "has_invite_staff": false,
+  "has_export_excel": false, "has_invite_staff": true,
   "has_multi_store": false, "has_realtime_notifications": false,
   "has_inventory_tickets": false
 }'::jsonb WHERE plan_name = 'Trial';

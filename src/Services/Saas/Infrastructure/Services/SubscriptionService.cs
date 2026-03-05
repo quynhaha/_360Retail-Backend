@@ -36,7 +36,7 @@ public class SubscriptionService : ISubscriptionService
     {
         var subscription = await _db.Subscriptions
             .Include(s => s.Plan)
-            .Where(s => s.StoreId == storeId && s.Status == "Active")
+            .Where(s => s.StoreId == storeId && (s.Status == "Active" || s.Status == "Trial"))
             .OrderByDescending(s => s.EndDate)
             .FirstOrDefaultAsync();
 

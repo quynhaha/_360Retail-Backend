@@ -78,8 +78,8 @@ public class FeatureGateFilter : IAsyncActionFilter
                 FROM saas.subscriptions s
                 JOIN saas.service_plans sp ON s.plan_id = sp.id
                 WHERE s.store_id = @storeId 
-                  AND s.is_active = TRUE
-                  AND s.end_date > NOW()
+                  AND s.status IN ('Active', 'Trial')
+                  AND (s.end_date IS NULL OR s.end_date > NOW())
                 ORDER BY s.end_date DESC
                 LIMIT 1";
 
