@@ -213,14 +213,11 @@ app.UseGlobalExceptionHandler();
 // Protect internal APIs with shared key
 app.UseInternalApiKeyProtection();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-    
-    // Auto redirect / to /swagger
-    app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
+
+// Auto redirect / to /swagger
+app.MapGet("/", () => Results.Redirect("/swagger")).ExcludeFromDescription();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");

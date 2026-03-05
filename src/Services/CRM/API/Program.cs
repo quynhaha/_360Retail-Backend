@@ -120,11 +120,8 @@ builder.Services.AddAutoMapper(cfg => {
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 // Protect internal APIs with shared key
 app.UseInternalApiKeyProtection();
