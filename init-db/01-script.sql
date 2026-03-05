@@ -564,7 +564,8 @@ CREATE INDEX IF NOT EXISTS "IX_loyalty_transactions_CustomerId" ON crm.loyalty_t
 ALTER TABLE crm.customers
 ADD COLUMN IF NOT EXISTS last_purchase_date TIMESTAMP,
 ADD COLUMN IF NOT EXISTS rank VARCHAR(50),
-ADD COLUMN IF NOT EXISTS zalo_id VARCHAR(100);
+ADD COLUMN IF NOT EXISTS zalo_id VARCHAR(100),
+ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
 
 -- 26/2/2026: Inventory Management - Update inventory_tickets table
 ALTER TABLE sales.inventory_tickets

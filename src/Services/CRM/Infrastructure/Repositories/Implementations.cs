@@ -67,13 +67,14 @@ public class CustomerRepository : ICustomerRepository
 
     public async Task<Customer?> GetByIdAsync(Guid id)
     {
-        return await _context.Customers.FindAsync(id);
+        return await _context.Customers
+            .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
     }
 
     public async Task<IEnumerable<Customer>> GetByStoreIdAsync(Guid storeId, int page, int pageSize)
     {
         return await _context.Customers
-            .Where(c => c.StoreId == storeId)
+            .Where(c => c.StoreId == storeId && !c.IsDeleted)
             .OrderBy(c => c.FullName)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -82,13 +83,13 @@ public class CustomerRepository : ICustomerRepository
 
     public async Task<int> GetTotalCountByStoreAsync(Guid storeId)
     {
-        return await _context.Customers.CountAsync(c => c.StoreId == storeId);
+        return await _context.Customers.CountAsync(c => c.StoreId == storeId && !c.IsDeleted);
     }
 
     public async Task<Customer?> GetByPhoneAndStoreAsync(string phone, Guid storeId)
     {
         return await _context.Customers
-            .FirstOrDefaultAsync(c => c.PhoneNumber == phone && c.StoreId == storeId);
+            .FirstOrDefaultAsync(c => c.PhoneNumber == phone && c.StoreId == storeId && !c.IsDeleted);
     }
 
     public async Task AddAsync(Customer customer)
@@ -105,7 +106,8 @@ public class CustomerRepository : ICustomerRepository
 
     public async Task DeleteAsync(Customer customer)
     {
-        _context.Customers.Remove(customer);
+        customer.IsDeleted = true;
+        _context.Customers.Update(customer);
         await _context.SaveChangesAsync();
     }
 }
