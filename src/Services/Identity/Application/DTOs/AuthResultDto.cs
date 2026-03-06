@@ -3,5 +3,6 @@
 public record AuthResultDto(
     string AccessToken,
     DateTime ExpiresAt,
-    bool MustChangePassword
+    bool MustChangePassword,
+    string? ProfilePictureUrl = null
 );

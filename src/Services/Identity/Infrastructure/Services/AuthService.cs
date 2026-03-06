@@ -83,7 +83,8 @@ public class AuthService : IAuthService
         return new AuthResultDto(
             token,
             DateTime.UtcNow.AddMinutes(expireMinutes),
-            user.MustChangePassword
+            user.MustChangePassword,
+            user.ProfilePictureUrl
         );
     }
 
@@ -223,7 +224,7 @@ public class AuthService : IAuthService
         var newLinkToken = await GenerateJwtTokenAsync(user);
         var expireMinutes = GetJwtExpireMinutes();
 
-        return new AuthResultDto(newLinkToken, DateTime.UtcNow.AddMinutes(expireMinutes), user.MustChangePassword);
+        return new AuthResultDto(newLinkToken, DateTime.UtcNow.AddMinutes(expireMinutes), user.MustChangePassword, user.ProfilePictureUrl);
     }
 
     // JWT
