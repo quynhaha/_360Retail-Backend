@@ -10,6 +10,7 @@ using _360Retail.Services.Identity.Infrastructure.Services.Email;
 using _360Retail.Services.Identity.Infrastructure.Services.Invitations;
 using _360Retail.Services.Identity.Infrastructure.Services.SuperAdmin;
 using _360Retail.Services.Identity.Infrastructure.Services.UserStoreAccess;
+using _360Retail.Services.Identity.Infrastructure.Services.Tracking;
 using _360Retail.Services.Identity.API.Services;
 using _360Retail.Services.Saas.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -96,6 +97,7 @@ builder.Services.AddScoped<IUserInvitationService, UserInvitationService>();
 builder.Services.AddScoped<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
 builder.Services.AddScoped<IUserStoreAccessService, UserStoreAccessService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<RedisTrackingService>();
 
 // ===== SIGNALR =====
 builder.Services.AddSignalR();
