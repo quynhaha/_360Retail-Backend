@@ -63,6 +63,11 @@ public class AuthService : IAuthService
         if (user == null)
             throw new UnauthorizedAccessException("Email hoặc mật khẩu không chính xác");
 
+        // Check if user has a password (OAuth-only users don't have one)
+        if (string.IsNullOrEmpty(user.PasswordHash))
+            throw new UnauthorizedAccessException(
+                $"Tài khoản này được đăng ký qua {user.AuthProvider}. Vui lòng đăng nhập bằng {user.AuthProvider}.");
+
         var verifyResult = _passwordHasher.VerifyHashedPassword(
             user,
             user.PasswordHash,
@@ -87,8 +92,19 @@ public class AuthService : IAuthService
     // Now requires email verification via OTP before activation
     public async Task RegisterAsync(RegisterUserDto dto)
     {
-        if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email && u.IsActivated))
-            throw BusinessException.Duplicate("Email", dto.Email);
+        // Block if ANY activated user with this email exists (Local, Google, Facebook)
+        var existingActivated = await _db.AppUsers
+            .FirstOrDefaultAsync(u => u.Email == dto.Email && u.IsActivated);
+        
+        if (existingActivated != null)
+        {
+            if (existingActivated.AuthProvider != "Local")
+                throw new BusinessException(
+                    $"Email này đã được đăng ký qua {existingActivated.AuthProvider}. Vui lòng đăng nhập bằng {existingActivated.AuthProvider}.",
+                    "DUPLICATE_EMAIL", 409);
+            else
+                throw BusinessException.Duplicate("Email", dto.Email);
+        }
 
         // Remove any unverified registration with same email (allow re-register)
         var existingUnverified = await _db.AppUsers
@@ -578,26 +594,42 @@ public class AuthService : IAuthService
         if (userInfo == null || string.IsNullOrEmpty(userInfo.Email))
             throw BusinessException.ValidationFailed("Xác thực token thất bại hoặc không lấy được thông tin");
 
-        // Find existing user by external ID or email
+        // Find existing user by external ID first, then by email
         var existingUser = await _db.AppUsers
             .Include(u => u.StoreAccesses)
             .Include(u => u.Roles)
             .FirstOrDefaultAsync(u => 
-                (u.AuthProvider == dto.Provider && u.ExternalUserId == userInfo.Sub) ||
-                (u.Email == userInfo.Email));
+                u.AuthProvider == dto.Provider && u.ExternalUserId == userInfo.Sub);
+
+        // If not found by external ID, search by email (for account linking)
+        if (existingUser == null)
+        {
+            existingUser = await _db.AppUsers
+                .Include(u => u.StoreAccesses)
+                .Include(u => u.Roles)
+                .FirstOrDefaultAsync(u => u.Email == userInfo.Email);
+        }
 
         bool isNewUser = existingUser == null;
 
         if (existingUser != null)
         {
-            // Update OAuth info if user was local before
-            if (existingUser.AuthProvider == "Local" && string.IsNullOrEmpty(existingUser.ExternalUserId))
+            // Case 1: Unverified local user → activate + link Google (skip OTP)
+            if (!existingUser.IsActivated)
+            {
+                existingUser.IsActivated = true;
+                existingUser.EmailVerificationCode = null;
+                existingUser.EmailVerificationExpiry = null;
+            }
+
+            // Case 2: Local user → link Google (keep existing password for dual login)
+            if (existingUser.AuthProvider == "Local")
             {
                 existingUser.AuthProvider = dto.Provider;
                 existingUser.ExternalUserId = userInfo.Sub;
                 existingUser.ProfilePictureUrl = userInfo.Picture;
             }
-            // Update profile picture if changed
+            // Case 3: Same provider, update profile picture if changed
             else if (existingUser.ProfilePictureUrl != userInfo.Picture)
             {
                 existingUser.ProfilePictureUrl = userInfo.Picture;
