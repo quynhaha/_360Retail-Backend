@@ -622,12 +622,17 @@ public class AuthService : IAuthService
                 existingUser.EmailVerificationExpiry = null;
             }
 
-            // Case 2: Local user → link Google (keep existing password for dual login)
+            // Case 2: Local user → link Google (keep password for dual login)
             if (existingUser.AuthProvider == "Local")
             {
-                existingUser.AuthProvider = dto.Provider;
+                // Don't change AuthProvider if user has a password (can login both ways)
+                // Only change if user has no password (pure OAuth)
+                if (string.IsNullOrEmpty(existingUser.PasswordHash))
+                {
+                    existingUser.AuthProvider = dto.Provider;
+                }
                 existingUser.ExternalUserId = userInfo.Sub;
-                existingUser.ProfilePictureUrl = userInfo.Picture;
+                existingUser.ProfilePictureUrl ??= userInfo.Picture;
             }
             // Case 3: Same provider, update profile picture if changed
             else if (existingUser.ProfilePictureUrl != userInfo.Picture)
