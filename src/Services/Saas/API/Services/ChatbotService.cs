@@ -222,7 +222,7 @@ Bạn là trợ lý AI của 360Retail — nền tảng quản lý bán lẻ Saa
     private async Task<string> CallGeminiAsync(string question)
     {
         var googleAi = new GoogleAI(_geminiApiKey!);
-        var model = googleAi.GenerativeModel(Model.Gemini15Flash);
+        var model = googleAi.GenerativeModel("gemini-2.0-flash");
 
         // System instruction + user question
         var prompt = $"{SystemPrompt}\n\n---\nCâu hỏi của khách hàng: {question}";
