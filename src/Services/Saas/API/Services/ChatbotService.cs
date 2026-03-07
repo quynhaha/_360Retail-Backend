@@ -1,4 +1,6 @@
-using Mscc.GenerativeAI;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -221,14 +223,43 @@ Bạn là trợ lý AI của 360Retail — nền tảng quản lý bán lẻ Saa
     /// </summary>
     private async Task<string> CallGeminiAsync(string question)
     {
-        var googleAi = new GoogleAI(_geminiApiKey!);
-        var model = googleAi.GenerativeModel("gemini-2.0-flash");
+        // Direct REST API call — no third-party library dependency
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 
-        // System instruction + user question
+        var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={_geminiApiKey}";
+
         var prompt = $"{SystemPrompt}\n\n---\nCâu hỏi của khách hàng: {question}";
 
-        var response = await model.GenerateContent(prompt);
-        return response?.Text ?? "Xin lỗi, tôi không thể trả lời câu hỏi này.";
+        var requestBody = new
+        {
+            contents = new[]
+            {
+                new { parts = new[] { new { text = prompt } } }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await httpClient.PostAsync(url, content);
+        var responseText = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("Gemini API returned {StatusCode}: {Body}", response.StatusCode, responseText);
+            throw new Exception($"Gemini API error: {response.StatusCode}");
+        }
+
+        // Parse response JSON
+        using var doc = JsonDocument.Parse(responseText);
+        var text = doc.RootElement
+            .GetProperty("candidates")[0]
+            .GetProperty("content")
+            .GetProperty("parts")[0]
+            .GetProperty("text")
+            .GetString();
+
+        return text ?? "Xin lỗi, tôi không thể trả lời câu hỏi này.";
     }
 }
 
