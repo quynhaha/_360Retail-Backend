@@ -57,6 +57,9 @@ public partial class CrmDbContext : DbContext
             entity.Property(e => e.ZaloId)
                 .HasMaxLength(100)
                 .HasColumnName("zalo_id");
+            entity.Property(e => e.IsDeleted)
+                .HasDefaultValue(false)
+                .HasColumnName("is_deleted");
             
             // Should match DB
             entity.Ignore(e => e.LoyaltyTransactions);
