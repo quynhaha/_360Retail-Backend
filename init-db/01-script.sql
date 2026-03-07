@@ -326,7 +326,7 @@ INSERT INTO identity.app_users (
 SELECT
     uuid_generate_v4(),
     'admin',
-    'admin',
+    'admin@360retail.com',
     'pmWkWSBCL51Bfkhn79xPuKBKHz//H6B+mY6G9/eieuM=',
     NULL,
     NULL,
@@ -334,7 +334,7 @@ SELECT
     TRUE,
     NOW()
 WHERE NOT EXISTS (
-    SELECT 1 FROM identity.app_users WHERE email = 'admin');
+    SELECT 1 FROM identity.app_users WHERE email = 'admin@360retail.com');
 
 
 
@@ -342,7 +342,7 @@ INSERT INTO identity.user_roles (user_id, role_id)
 SELECT u.id, r.id
 FROM identity.app_users u
 JOIN identity.app_roles r ON r.role_name = 'SuperAdmin'
-WHERE u.email = 'admin'
+WHERE u.email = 'admin@360retail.com'
 AND NOT EXISTS (
     SELECT 1
     FROM identity.user_roles ur
