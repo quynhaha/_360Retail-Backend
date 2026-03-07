@@ -7,13 +7,13 @@ using Microsoft.Extensions.Logging;
 namespace _360Retail.Services.Saas.API.Services;
 
 /// <summary>
-/// Hybrid AI Chatbot — FAQ cứng + Gemini AI fallback
+/// Hybrid AI Chatbot — FAQ cứng + Groq AI fallback (Llama 3.3 70B)
 /// Chỉ trả lời về 360Retail, từ chối câu hỏi ngoài phạm vi
 /// </summary>
 public class ChatbotService
 {
     private readonly ILogger<ChatbotService> _logger;
-    private readonly string? _geminiApiKey;
+    private readonly string? _groqApiKey;
 
     // FAQ database — câu hỏi phổ biến, trả lời cứng (không tốn token)
     private static readonly Dictionary<string[], string> FaqDatabase = new()
@@ -155,12 +155,12 @@ Bạn là trợ lý AI của 360Retail — nền tảng quản lý bán lẻ Saa
 
     public ChatbotService(IConfiguration config, ILogger<ChatbotService> logger)
     {
-        _geminiApiKey = config["Gemini:ApiKey"];
+        _groqApiKey = config["Groq:ApiKey"];
         _logger = logger;
     }
 
     /// <summary>
-    /// Xử lý câu hỏi: FAQ match trước, Gemini fallback sau
+    /// Xử lý câu hỏi: FAQ match trước, Groq AI fallback sau
     /// </summary>
     public async Task<ChatbotResponse> AskAsync(string question)
     {
@@ -177,10 +177,10 @@ Bạn là trợ lý AI của 360Retail — nền tảng quản lý bán lẻ Saa
             return new ChatbotResponse(faqAnswer, "faq");
         }
 
-        // 2. Gemini AI fallback
-        if (string.IsNullOrEmpty(_geminiApiKey))
+        // 2. Groq AI fallback (Llama 3.3 70B)
+        if (string.IsNullOrEmpty(_groqApiKey))
         {
-            _logger.LogWarning("Gemini API key not configured, falling back to default");
+            _logger.LogWarning("Groq API key not configured, falling back to default");
             return new ChatbotResponse(
                 "Cảm ơn bạn đã quan tâm! Để được tư vấn chi tiết, " +
                 "vui lòng liên hệ support@360retail.vn hoặc thử hỏi về: giá gói, tính năng, cách đăng ký.",
@@ -190,13 +190,13 @@ Bạn là trợ lý AI của 360Retail — nền tảng quản lý bán lẻ Saa
 
         try
         {
-            var answer = await CallGeminiAsync(question);
+            var answer = await CallGroqAsync(question);
             _logger.LogInformation("Chatbot AI response: {Question}", question);
             return new ChatbotResponse(answer, "ai");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Gemini API error for question: {Question}", question);
+            _logger.LogError(ex, "Groq API error for question: {Question}", question);
             return new ChatbotResponse(
                 "Xin lỗi, tôi đang gặp sự cố. Vui lòng thử lại sau hoặc liên hệ support@360retail.vn.",
                 "error"
@@ -219,23 +219,25 @@ Bạn là trợ lý AI của 360Retail — nền tảng quản lý bán lẻ Saa
     }
 
     /// <summary>
-    /// Gọi Gemini API với System Prompt giới hạn phạm vi
+    /// Gọi Groq API (OpenAI-compatible) với Llama 3.3 70B
     /// </summary>
-    private async Task<string> CallGeminiAsync(string question)
+    private async Task<string> CallGroqAsync(string question)
     {
-        // Direct REST API call — no third-party library dependency
         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+        httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_groqApiKey}");
 
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={_geminiApiKey}";
-
-        var prompt = $"{SystemPrompt}\n\n---\nCâu hỏi của khách hàng: {question}";
+        var url = "https://api.groq.com/openai/v1/chat/completions";
 
         var requestBody = new
         {
-            contents = new[]
+            model = "llama-3.3-70b-versatile",
+            messages = new[]
             {
-                new { parts = new[] { new { text = prompt } } }
-            }
+                new { role = "system", content = SystemPrompt },
+                new { role = "user", content = question }
+            },
+            temperature = 0.7,
+            max_tokens = 500
         };
 
         var json = JsonSerializer.Serialize(requestBody);
@@ -246,17 +248,16 @@ Bạn là trợ lý AI của 360Retail — nền tảng quản lý bán lẻ Saa
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError("Gemini API returned {StatusCode}: {Body}", response.StatusCode, responseText);
-            throw new Exception($"Gemini API error: {response.StatusCode}");
+            _logger.LogError("Groq API returned {StatusCode}: {Body}", response.StatusCode, responseText);
+            throw new Exception($"Groq API error: {response.StatusCode}");
         }
 
-        // Parse response JSON
+        // Parse OpenAI-compatible response
         using var doc = JsonDocument.Parse(responseText);
         var text = doc.RootElement
-            .GetProperty("candidates")[0]
+            .GetProperty("choices")[0]
+            .GetProperty("message")
             .GetProperty("content")
-            .GetProperty("parts")[0]
-            .GetProperty("text")
             .GetString();
 
         return text ?? "Xin lỗi, tôi không thể trả lời câu hỏi này.";
