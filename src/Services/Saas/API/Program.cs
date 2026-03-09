@@ -6,7 +6,10 @@ using System.Text;
 
 using _360Retail.Services.Saas.Infrastructure.Persistence;
 using _360Retail.Services.Saas.Application.Interfaces;
+using _360Retail.Services.Saas.Application.Interfaces.SuperAdmin;
 using _360Retail.Services.Saas.Infrastructure.Services;
+using _360Retail.Services.Saas.Infrastructure.Services.SuperAdmin;
+using _360Retail.Services.Saas.Infrastructure.Services.Caching;
 using _360Retail.Services.Saas.API.Services;
 using Microsoft.OpenApi.Models;
 using _360Retail.Services.Saas.Infrastructure.HttpClients;
@@ -82,10 +85,27 @@ builder.Services.AddDbContext<SaasDbContext>(options =>
 // DI
 builder.Services.AddScoped<IStoreService, StoreService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<ISuperAdminDashboardService, SuperAdminDashboardService>();
 builder.Services.AddSingleton<VNPayService>();
 builder.Services.AddSingleton<SePayService>();
 builder.Services.AddScoped<IPlanReviewService, PlanReviewService>();
 builder.Services.AddSingleton<ChatbotService>();
+
+// Caching (Redis or Memory fallback)
+var redisConn = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrEmpty(redisConn))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisConn;
+        options.InstanceName = "360Retail_Saas_";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+builder.Services.AddScoped<CacheService>();
 
 // Shared Email Services (for subscription expiry notifications)
 builder.Services.AddSharedEmailServices();

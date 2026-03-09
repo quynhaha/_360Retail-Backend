@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using _360Retail.Services.Identity.Application.DTOs.SuperAdmin;
+using _360Retail.Services.Identity.Application.DTOs.SuperAdmin.Tracking;
 using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
+using _360Retail.Services.Identity.Infrastructure.Services.Tracking;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,10 +13,12 @@ namespace _360Retail.Services.Identity.Infrastructure.Services.SuperAdmin;
 public class SuperAdminUserService : ISuperAdminUserService
 {
     private readonly IdentityDbContext _db;
+    private readonly RedisTrackingService _trackingService;
 
-    public SuperAdminUserService(IdentityDbContext db)
+    public SuperAdminUserService(IdentityDbContext db, RedisTrackingService trackingService)
     {
         _db = db;
+        _trackingService = trackingService;
     }
 
     // GET ALL USERS
@@ -135,5 +139,53 @@ public class SuperAdminUserService : ISuperAdminUserService
         return Convert.ToBase64String(
             sha.ComputeHash(Encoding.UTF8.GetBytes(password))
         );
+    }
+
+    // STATS & TRACKING
+    public async Task<List<DailyRegistrationStatDto>> GetDailyRegistrationStatsAsync(DateTime from, DateTime to)
+    {
+        var rawStats = await _db.AppUsers
+            .Where(u => u.CreatedAt >= from && u.CreatedAt <= to)
+            .GroupBy(u => u.CreatedAt.Date)
+            .Select(g => new
+            {
+                Date = g.Key,
+                Count = g.Count()
+            })
+            .ToListAsync();
+            
+        return rawStats.Select(s => new DailyRegistrationStatDto
+        {
+            Date = s.Date.ToString("yyyy-MM-dd"),
+            Count = s.Count
+        }).OrderBy(s => s.Date).ToList();
+    }
+
+    public async Task<List<FunnelStatDto>> GetFunnelStatsAsync(DateTime from, DateTime to)
+    {
+        var result = new List<FunnelStatDto>();
+        
+        // Loop through each day in the range
+        for (var date = from.Date; date <= to.Date; date = date.AddDays(1))
+        {
+            var dateStr = date.ToString("yyyy-MM-dd");
+            
+            // Get views from Redis
+            var views = await _trackingService.GetPageViewsAsync(dateStr);
+            
+            // Get signups for that day from DB
+            var nextDate = date.AddDays(1);
+            var signups = await _db.AppUsers
+                .CountAsync(u => u.CreatedAt >= date && u.CreatedAt < nextDate);
+                
+            result.Add(new FunnelStatDto 
+            {
+                Date = dateStr,
+                LandingPageViews = views,
+                Signups = signups
+            });
+        }
+        
+        return result;
     }
 }

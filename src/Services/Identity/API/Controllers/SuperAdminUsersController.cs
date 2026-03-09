@@ -42,4 +42,28 @@ public class SuperAdminUsersController : ControllerBase
         await _service.DeleteAsync(id);
         return NoContent();
     }
+
+    [HttpGet("stats/registrations")]
+    public async Task<IActionResult> GetRegistrationStats(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to)
+    {
+        var toDate = to ?? DateTime.UtcNow;
+        var fromDate = from ?? toDate.AddDays(-30);
+        
+        var stats = await _service.GetDailyRegistrationStatsAsync(fromDate, toDate);
+        return Ok(new { success = true, data = stats });
+    }
+
+    [HttpGet("stats/funnel/landing-to-signup")]
+    public async Task<IActionResult> GetFunnelStats(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to)
+    {
+        var toDate = to ?? DateTime.UtcNow;
+        var fromDate = from ?? toDate.AddDays(-30);
+        
+        var stats = await _service.GetFunnelStatsAsync(fromDate, toDate);
+        return Ok(new { success = true, data = stats });
+    }
 }
