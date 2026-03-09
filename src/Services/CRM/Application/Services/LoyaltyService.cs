@@ -8,6 +8,7 @@ namespace _360Retail.Services.CRM.Application.Services;
 public interface ILoyaltyService
 {
     Task<CustomerLoyaltySummaryDto> GetCustomerSummaryAsync(Guid customerId);
+    Task<CustomerLoyaltySummaryDto?> GetCustomerByPhoneAsync(Guid storeId, string phone);
     Task ProcessEarnPointsAsync(Guid storeId, EarnPointsRequestDto request);
     Task ProcessRedeemPointsAsync(Guid storeId, RedeemPointsRequestDto request);
     Task<PagedResult<LoyaltyTransactionDto>> GetTransactionsAsync(Guid customerId, int page, int pageSize);
@@ -33,6 +34,20 @@ public class LoyaltyService : ILoyaltyService
     {
         var customer = await _customerRepo.GetByIdAsync(customerId);
         if (customer == null) throw new KeyNotFoundException("Customer not found");
+
+        return new CustomerLoyaltySummaryDto
+        {
+            CustomerId = customer.Id,
+            CustomerName = customer.FullName,
+            TotalPoints = customer.TotalPoints ?? 0,
+            Rank = customer.Rank ?? "Bronze"
+        };
+    }
+
+    public async Task<CustomerLoyaltySummaryDto?> GetCustomerByPhoneAsync(Guid storeId, string phone)
+    {
+        var customer = await _customerRepo.GetByPhoneAndStoreAsync(phone, storeId);
+        if (customer == null) return null;
 
         return new CustomerLoyaltySummaryDto
         {

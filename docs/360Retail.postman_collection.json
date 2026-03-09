@@ -2016,6 +2016,37 @@
             "description": "Tích điểm, đổi thưởng",
             "item": [
                 {
+                    "name": "Check Loyalty by Phone (PUBLIC)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/crm/loyalty/check?phone=0901234567&storeId={{storeId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "crm",
+                                "loyalty",
+                                "check"
+                            ],
+                            "query": [
+                                {
+                                    "key": "phone",
+                                    "value": "0901234567",
+                                    "description": "SĐT khách hàng"
+                                },
+                                {
+                                    "key": "storeId",
+                                    "value": "{{storeId}}",
+                                    "description": "ID store"
+                                }
+                            ]
+                        },
+                        "description": "PUBLIC endpoint (không cần login). Khách scan QR → nhập SĐT → xem điểm loyalty.\n\n**Response:** `{ customerName, totalPoints, rank }`"
+                    }
+                },
+                {
                     "name": "Get Loyalty Rules",
                     "request": {
                         "method": "GET",
@@ -2957,6 +2988,161 @@
                             ]
                         },
                         "description": "Danh sách tất cả payments toàn hệ thống.\n\n**Response:** `[{ storeName, planName, amount, status, provider, paymentDate, transactionCode }]`"
+                    }
+                },
+                {
+                    "name": "Get All Plans (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/plans",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "plans"
+                            ]
+                        },
+                        "description": "Danh sách tất cả gói dịch vụ (bao gồm inactive).\n\n**Response:** `[{ planName, price, durationDays, features, isActive, activeSubscriptions }]`"
+                    }
+                },
+                {
+                    "name": "Create Plan (Admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/plans",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "plans"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"planName\": \"Enterprise\",\n  \"price\": 999000,\n  \"durationDays\": 365,\n  \"features\": \"{\\\"has_loyalty\\\":true,\\\"has_chatbot\\\":true}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "description": "Tạo gói mới."
+                    }
+                },
+                {
+                    "name": "Update Plan (Admin)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/plans/{{planId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "plans",
+                                "{{planId}}"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"price\": 599000,\n  \"features\": \"{\\\"has_loyalty\\\":true}\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "description": "Cập nhật gói (giá, tính năng, active status)."
+                    }
+                },
+                {
+                    "name": "Deactivate Plan (Admin)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/plans/{{planId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "plans",
+                                "{{planId}}"
+                            ]
+                        },
+                        "description": "Vô hiệu hóa gói (soft delete). Không thể vô hiệu nếu còn subscriptions active."
+                    }
+                },
+                {
+                    "name": "Cancel Subscription (Admin)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/dashboard/subscriptions/{{subscriptionId}}/cancel",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "dashboard",
+                                "subscriptions",
+                                "{{subscriptionId}}",
+                                "cancel"
+                            ]
+                        },
+                        "description": "Admin hủy subscription cho store."
+                    }
+                },
+                {
+                    "name": "Extend Subscription (Admin)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/dashboard/subscriptions/{{subscriptionId}}/extend",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "dashboard",
+                                "subscriptions",
+                                "{{subscriptionId}}",
+                                "extend"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"days\": 30\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "description": "Admin gia hạn subscription thêm N ngày."
                     }
                 },
                 {
