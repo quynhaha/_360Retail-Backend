@@ -173,7 +173,11 @@ CREATE TABLE IF NOT EXISTS crm.customers (
     app_user_id UUID REFERENCES identity.app_users(id) ON DELETE CASCADE,
     full_name VARCHAR(100),
     phone_number VARCHAR(20) NOT NULL,
+    zalo_id VARCHAR(100),
+    last_purchase_date TIMESTAMPTZ,
     total_points INT DEFAULT 0,
+    rank VARCHAR(20) DEFAULT 'Bronze',
+    is_deleted BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
