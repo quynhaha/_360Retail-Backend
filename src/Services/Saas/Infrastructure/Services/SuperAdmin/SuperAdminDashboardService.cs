@@ -101,4 +101,118 @@ public class SuperAdminDashboardService : ISuperAdminDashboardService
             })
             .ToListAsync();
     }
+
+    public async Task<List<AdminStoreDetailDto>> GetAllStoresDetailAsync()
+    {
+        var stores = await _db.Stores
+            .Include(s => s.Subscriptions)
+                .ThenInclude(sub => sub.Plan)
+            .OrderByDescending(s => s.CreatedAt)
+            .ToListAsync();
+
+        // Cross-schema query: lấy owner email từ identity schema
+        var ownerEmails = new Dictionary<Guid, string>();
+        try
+        {
+            using var conn = _db.Database.GetDbConnection();
+            await conn.OpenAsync();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT usa.store_id, u.email 
+                FROM identity.user_store_access usa
+                JOIN identity.app_users u ON u.id = usa.user_id
+                WHERE usa.role_in_store = 'Owner'";
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var storeId = reader.GetGuid(0);
+                var email = reader.GetString(1);
+                ownerEmails[storeId] = email;
+            }
+        }
+        catch { /* ignore cross-schema errors */ }
+
+        return stores.Select(s =>
+        {
+            var activeSub = s.Subscriptions
+                .Where(sub => sub.Status == "Active" || sub.Status == "Trial" || sub.Status == "Trialing")
+                .OrderByDescending(sub => sub.EndDate)
+                .FirstOrDefault();
+
+            return new AdminStoreDetailDto
+            {
+                Id = s.Id,
+                StoreName = s.StoreName,
+                Address = s.Address,
+                IsActive = s.IsActive,
+                CreatedAt = s.CreatedAt,
+                OwnerEmail = ownerEmails.GetValueOrDefault(s.Id),
+                CurrentPlan = activeSub?.Plan?.PlanName,
+                SubscriptionStatus = activeSub?.Status ?? "None",
+                SubscriptionEndDate = activeSub?.EndDate
+            };
+        }).ToList();
+    }
+
+    public async Task<List<AdminSubscriptionDto>> GetAllSubscriptionsAsync(string? status, Guid? planId)
+    {
+        var query = _db.Subscriptions
+            .Include(s => s.Store)
+            .Include(s => s.Plan)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(status))
+            query = query.Where(s => s.Status == status);
+
+        if (planId.HasValue)
+            query = query.Where(s => s.PlanId == planId.Value);
+
+        return await query
+            .OrderByDescending(s => s.StartDate)
+            .Select(s => new AdminSubscriptionDto
+            {
+                Id = s.Id,
+                StoreName = s.Store.StoreName,
+                PlanName = s.Plan.PlanName,
+                PlanPrice = s.Plan.Price,
+                Status = s.Status,
+                StartDate = s.StartDate,
+                EndDate = s.EndDate
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<AdminPaymentDto>> GetAllPaymentsAsync(string? status, DateTime? from, DateTime? to)
+    {
+        var query = _db.Payments
+            .Include(p => p.Subscription)
+                .ThenInclude(s => s.Store)
+            .Include(p => p.Subscription)
+                .ThenInclude(s => s.Plan)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(status))
+            query = query.Where(p => p.Status == status);
+
+        if (from.HasValue)
+            query = query.Where(p => p.PaymentDate >= from.Value);
+
+        if (to.HasValue)
+            query = query.Where(p => p.PaymentDate <= to.Value);
+
+        return await query
+            .OrderByDescending(p => p.PaymentDate)
+            .Select(p => new AdminPaymentDto
+            {
+                Id = p.Id,
+                StoreName = p.Subscription.Store.StoreName,
+                PlanName = p.Subscription.Plan.PlanName,
+                Amount = p.Amount,
+                Status = p.Status,
+                Provider = p.Provider,
+                PaymentDate = p.PaymentDate,
+                TransactionCode = p.TransactionCode
+            })
+            .ToListAsync();
+    }
 }

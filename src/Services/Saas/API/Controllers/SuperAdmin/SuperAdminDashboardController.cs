@@ -60,4 +60,34 @@ public class SuperAdminDashboardController : ControllerBase
             
         return Ok(new { success = true, data = result });
     }
+
+    [HttpGet("stores")]
+    public async Task<IActionResult> GetAllStoresDetail()
+    {
+        var cacheKey = "superadmin:dashboard:stores";
+        var result = await _cache.GetOrSetAsync(cacheKey,
+            () => _dashboardService.GetAllStoresDetailAsync(),
+            TimeSpan.FromMinutes(5));
+
+        return Ok(new { success = true, data = result });
+    }
+
+    [HttpGet("subscriptions")]
+    public async Task<IActionResult> GetAllSubscriptions(
+        [FromQuery] string? status,
+        [FromQuery] Guid? planId)
+    {
+        var result = await _dashboardService.GetAllSubscriptionsAsync(status, planId);
+        return Ok(new { success = true, data = result });
+    }
+
+    [HttpGet("payments")]
+    public async Task<IActionResult> GetAllPayments(
+        [FromQuery] string? status,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to)
+    {
+        var result = await _dashboardService.GetAllPaymentsAsync(status, from, to);
+        return Ok(new { success = true, data = result });
+    }
 }

@@ -2865,6 +2865,101 @@
                     }
                 },
                 {
+                    "name": "All Stores Detail (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/dashboard/stores",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "dashboard",
+                                "stores"
+                            ]
+                        },
+                        "description": "Danh sách tất cả stores chi tiết.\n\n**Response:** `[{ storeName, ownerEmail, currentPlan, subscriptionStatus, subscriptionEndDate }]`\n\n**FE:** Table với filter, search."
+                    }
+                },
+                {
+                    "name": "All Subscriptions (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/dashboard/subscriptions?status=Active",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "dashboard",
+                                "subscriptions"
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "Active",
+                                    "description": "Filter: Active | Trial | Trialing | Expired"
+                                },
+                                {
+                                    "key": "planId",
+                                    "value": "",
+                                    "description": "Filter theo Plan ID (optional)",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Danh sách tất cả subscriptions toàn hệ thống.\n\n**Response:** `[{ storeName, planName, planPrice, status, startDate, endDate }]`"
+                    }
+                },
+                {
+                    "name": "All Payments (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/dashboard/payments?status=Completed",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "dashboard",
+                                "payments"
+                            ],
+                            "query": [
+                                {
+                                    "key": "status",
+                                    "value": "Completed",
+                                    "description": "Filter: Completed | Pending | Failed"
+                                },
+                                {
+                                    "key": "from",
+                                    "value": "2026-01-01",
+                                    "description": "Ngày bắt đầu",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-12-31",
+                                    "description": "Ngày kết thúc",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Danh sách tất cả payments toàn hệ thống.\n\n**Response:** `[{ storeName, planName, amount, status, provider, paymentDate, transactionCode }]`"
+                    }
+                },
+                {
                     "name": "Funnel: Landing → Signup",
                     "request": {
                         "method": "GET",

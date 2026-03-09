@@ -1,12 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using _360Retail.Services.Identity.Application.DTOs.SuperAdmin;
 using _360Retail.Services.Identity.Application.DTOs.SuperAdmin.Tracking;
 using _360Retail.Services.Identity.Application.Interfaces.SuperAdmin;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
 using _360Retail.Services.Identity.Infrastructure.Services.Tracking;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace _360Retail.Services.Identity.Infrastructure.Services.SuperAdmin;
 
@@ -61,11 +60,12 @@ public class SuperAdminUserService : ISuperAdminUserService
     }
 
  
-    // CREATE USER (NOT SUPERADMIN)
+    // CREATE USER — Admin chỉ được tạo PotentialOwner hoặc StoreOwner
     public async Task<Guid> CreateAsync(CreateUserDto dto)
     {
-        if (dto.RoleName == "SuperAdmin")
-            throw new Exception("Không thể tạo tài khoản SuperAdmin qua API");
+        var allowedRoles = new[] { "PotentialOwner", "StoreOwner" };
+        if (!allowedRoles.Contains(dto.RoleName))
+            throw new Exception($"Admin chỉ được tạo tài khoản {string.Join("/", allowedRoles)}. Các role khác do StoreOwner tự mời.");
 
         if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email))
             throw new Exception("Email đã tồn tại");
@@ -76,16 +76,17 @@ public class SuperAdminUserService : ISuperAdminUserService
         if (role == null)
             throw new Exception("Vai trò không hợp lệ");
 
+        var hasher = new PasswordHasher<AppUser>();
         var user = new AppUser
         {
             Id = Guid.NewGuid(),
             Email = dto.Email,
             UserName = dto.Email,
-            PasswordHash = HashPassword(dto.Password),
             Status = "Active",
             IsActivated = true,
             CreatedAt = DateTime.UtcNow
         };
+        user.PasswordHash = hasher.HashPassword(user, dto.Password);
 
         user.Roles.Add(role);
 
@@ -114,7 +115,7 @@ public class SuperAdminUserService : ISuperAdminUserService
         await _db.SaveChangesAsync();
     }
 
-    // DELETE USER
+    // DELETE USER (soft delete — vô hiệu hóa tài khoản)
     public async Task DeleteAsync(Guid id)
     {
         var user = await _db.AppUsers
@@ -128,17 +129,10 @@ public class SuperAdminUserService : ISuperAdminUserService
         if (user.Roles.Any(r => r.RoleName == "SuperAdmin"))
             throw new Exception("Không thể xóa tài khoản SuperAdmin");
 
-        _db.AppUsers.Remove(user);
+        // Soft delete: vô hiệu hóa thay vì xóa thật
+        user.IsActivated = false;
+        user.Status = "Disabled";
         await _db.SaveChangesAsync();
-    }
-
-    // PASSWORD HASH (reuse logic)
-    private static string HashPassword(string password)
-    {
-        using var sha = SHA256.Create();
-        return Convert.ToBase64String(
-            sha.ComputeHash(Encoding.UTF8.GetBytes(password))
-        );
     }
 
     // STATS & TRACKING

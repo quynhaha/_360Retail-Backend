@@ -8,7 +8,7 @@ namespace _360Retail.Services.Identity.API.Controllers;
 
 [ApiController]
 [Route("api/staff")]
-[Authorize(Roles = "Admin,StoreOwner")]
+[Authorize(Roles = "SuperAdmin,StoreOwner")]
 public class StaffController : ControllerBase
 {
     private readonly IUserInvitationService _invitationService;
