@@ -327,7 +327,7 @@ SELECT
     uuid_generate_v4(),
     'admin',
     'admin@360retail.com',
-    'pmWkWSBCL51Bfkhn79xPuKBKHz//H6B+mY6G9/eieuM=',
+    'AQAAAAIAAYagAAAAEMcW+SlMw3yRHiq4mX9WXOgSVafdXziOUQVmi69u6N0BLLrOq53pGiYy5/7OXIFw3A==',
     NULL,
     NULL,
     'Active',

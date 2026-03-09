@@ -16,15 +16,17 @@ public class SuperAdminDashboardService : ISuperAdminDashboardService
 
     public async Task<DashboardOverviewDto> GetOverviewAsync()
     {
-        // 1. Revenue
+        // 1. Revenue (cast to nullable to avoid Npgsql error on empty table)
         var totalRevenue = await _db.Payments
             .Where(p => p.Status == "Completed")
-            .SumAsync(p => p.Amount);
+            .Select(p => (decimal?)p.Amount)
+            .SumAsync() ?? 0;
 
-        var firstDayOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+        var firstDayOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         var mrr = await _db.Payments
             .Where(p => p.Status == "Completed" && p.PaymentDate >= firstDayOfMonth)
-            .SumAsync(p => p.Amount);
+            .Select(p => (decimal?)p.Amount)
+            .SumAsync() ?? 0;
 
         // 2. Stores Status
         // A store is Active if it has any active subscription
@@ -32,7 +34,7 @@ public class SuperAdminDashboardService : ISuperAdminDashboardService
             .CountAsync(s => s.Subscriptions.Any(sub => sub.Status == "Active"));
             
         var trialStores = await _db.Stores
-            .CountAsync(s => s.Subscriptions.Any(sub => sub.Status == "Trialing"));
+            .CountAsync(s => s.Subscriptions.Any(sub => sub.Status == "Trial" || sub.Status == "Trialing"));
 
         var expiredStores = await _db.Stores
             .CountAsync(s => s.Subscriptions.All(sub => sub.Status == "Expired" || sub.Status == "Canceled"));
@@ -43,7 +45,7 @@ public class SuperAdminDashboardService : ISuperAdminDashboardService
             .CountAsync(s => s.Subscriptions.Any(sub => sub.Payments.Any(p => p.Status == "Completed")));
             
         var totalStoresWithTrial = await _db.Stores
-            .CountAsync(s => s.Subscriptions.Any(sub => sub.Status == "Trialing" || sub.Status == "Active" || sub.Status == "Expired"));
+            .CountAsync(s => s.Subscriptions.Any(sub => sub.Status == "Trial" || sub.Status == "Trialing" || sub.Status == "Active" || sub.Status == "Expired"));
 
         decimal conversionRate = 0;
         if (totalStoresWithTrial > 0)
@@ -89,7 +91,7 @@ public class SuperAdminDashboardService : ISuperAdminDashboardService
     public async Task<List<PlanDistributionDto>> GetPlanDistributionAsync()
     {
         return await _db.Subscriptions
-            .Where(s => s.Status == "Active" || s.Status == "Trialing")
+            .Where(s => s.Status == "Active" || s.Status == "Trial" || s.Status == "Trialing")
             .Include(s => s.Plan)
             .GroupBy(s => s.Plan.PlanName)
             .Select(g => new PlanDistributionDto
