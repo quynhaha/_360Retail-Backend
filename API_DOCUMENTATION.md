@@ -1,7 +1,7 @@
 # 360Retail - Hướng Dẫn Sử Dụng API
 
 > **Tài liệu hướng dẫn thực hành cho Frontend Team**  
-> Cập nhật: 04/03/2026  
+> Cập nhật: 09/03/2026  
 > **Swagger UI**: http://localhost:5001/swagger (khi Docker đang chạy)
 
 ---
@@ -35,6 +35,10 @@
 | 16 | DELETE | `/identity/admin/users/{id}` | SuperAdmin | Xóa user |
 | 99 | POST | `/identity/auth/forgot-password` | ❌ | Gửi mã reset 6 số qua email |
 | 100 | POST | `/identity/auth/reset-password` | ❌ | Đặt lại mật khẩu bằng mã |
+| 104 | POST | `/identity/tracking/page-view` | ❌ | Ghi nhận lượt xem landing page (anonymous) |
+| 105 | GET | `/identity/tracking/page-views/{date}` | SuperAdmin | Xem lượt view landing theo ngày |
+| 106 | GET | `/identity/super-admin/users/stats/registrations` | SuperAdmin | Thống kê đăng ký user theo ngày |
+| 107 | GET | `/identity/super-admin/users/stats/funnel/landing-to-signup` | SuperAdmin | Funnel: Landing → Signup (conversion rate) |
 
 ### 🏪 SaaS Service (`/saas`)
 
@@ -66,6 +70,9 @@
 | 35 | GET | `/saas/plan-reviews/admin` | SuperAdmin | DS reviews toàn hệ thống |
 | 36 | GET | `/saas/plan-reviews/admin/dashboard` | SuperAdmin | Dashboard thống kê reviews |
 | 37 | DELETE | `/saas/plan-reviews/admin/{reviewId}` | SuperAdmin | Xóa review spam |
+| 108 | GET | `/saas/super-admin/saas/dashboard/overview` | SuperAdmin | Tổng quan: doanh thu, MRR, stores, conversion rate |
+| 109 | GET | `/saas/super-admin/saas/dashboard/revenue-chart` | SuperAdmin | Biểu đồ doanh thu theo thời gian |
+| 110 | GET | `/saas/super-admin/saas/dashboard/plan-distribution` | SuperAdmin | Phân bổ gói dịch vụ (Pie chart) |
 
 ### 🛒 Sales Service (`/sales`)
 
@@ -1399,6 +1406,135 @@ POST /saas/subscriptions/check-expiry?days=7
 GET /saas/subscriptions/my-expiry
 ```
 → Response: Thông tin subscription hiện tại, ngày hết hạn, số ngày còn lại.
+
+---
+
+## Luồng 16: SuperAdmin Dashboard (Quản trị hệ thống)
+
+> **Role**: SuperAdmin only
+> **Login**: `admin@360retail.com` / `123456`
+> Tất cả endpoint cache 10 phút.
+
+### 16.1: Đăng nhập Admin
+
+```
+POST /identity/auth/login
+```
+```json
+{
+  "email": "admin@360retail.com",
+  "password": "123456"
+}
+```
+→ Decode JWT → kiểm tra claim `role` = `SuperAdmin` → redirect `/admin/dashboard`
+
+---
+
+### 16.2: Dashboard Overview (6 KPI Cards)
+
+```
+GET /saas/super-admin/saas/dashboard/overview
+```
+→ Response:
+```json
+{
+  "success": true,
+  "data": {
+    "totalRevenue": 1396000.00,
+    "monthlyRecurringRevenue": 499000.00,
+    "activeStores": 2,
+    "trialStores": 2,
+    "expiredStores": 1,
+    "trialToPaidConversionRate": 60.00
+  }
+}
+```
+
+| Field | UI | Format |
+|-------|----|---------|
+| `totalRevenue` | Card | `1,396,000₫` |
+| `monthlyRecurringRevenue` | Card | So sánh tháng trước |
+| `activeStores` | Badge xanh | Số nguyên |
+| `trialStores` | Badge vàng | Số nguyên |
+| `expiredStores` | Badge đỏ | Số nguyên |
+| `trialToPaidConversionRate` | Donut/Progress | `60.00%` |
+
+---
+
+### 16.3: Biểu đồ doanh thu
+
+```
+GET /saas/super-admin/saas/dashboard/revenue-chart?from=2025-01-01&to=2026-12-31&groupBy=month
+```
+→ Response: `[{ "date": "2026-01", "revenue": 499000.00 }, ...]`
+
+**FE**: Line Chart / Bar Chart (Recharts). Cho chọn `groupBy`: `day` | `week` | `month`.
+
+---
+
+### 16.4: Phân bổ gói dịch vụ
+
+```
+GET /saas/super-admin/saas/dashboard/plan-distribution
+```
+→ Response: `[{ "planName": "Basic", "count": 3 }, ...]`
+
+**FE**: Pie Chart / Donut Chart.
+
+---
+
+### 16.5: Funnel Landing → Signup
+
+Bước 1 (FE Landing Page — anonymous):
+```
+POST /identity/tracking/page-view
+```
+→ Gọi 1 lần khi user mở landing page.
+
+Bước 2 (Admin Dashboard):
+```
+GET /identity/super-admin/users/stats/funnel/landing-to-signup?from=2026-02-01&to=2026-03-31
+```
+→ Response: `[{ "date": "2026-03-09", "landingPageViews": 15, "signups": 3, "conversionRate": 20.00 }]`
+
+**FE**: Funnel Chart hoặc bảng Views vs Signups.
+
+---
+
+### 16.6: Thống kê đăng ký theo ngày
+
+```
+GET /identity/super-admin/users/stats/registrations?from=2026-02-01&to=2026-03-31
+```
+→ Response: `[{ "date": "2026-03-05", "count": 3 }]`
+
+**FE**: Bar Chart.
+
+---
+
+### 16.7: Quản lý Users (CRUD)
+
+```
+GET  /identity/super-admin/users              → DS tất cả users
+GET  /identity/super-admin/users/{id}         → Chi tiết user
+POST /identity/super-admin/users              → Tạo user
+PUT  /identity/super-admin/users/{id}         → Sửa user
+DELETE /identity/super-admin/users/{id}       → Xóa user
+```
+
+Response User:
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "isActivated": true,
+  "status": "Active",
+  "storeId": "uuid-or-null",
+  "roles": ["StoreOwner"]
+}
+```
+
+**FE**: Table + search + filter by role/status. Modal tạo/sửa.
 
 ---
 

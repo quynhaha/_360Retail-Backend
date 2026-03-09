@@ -2731,6 +2731,457 @@
                     }
                 }
             ]
+        },
+        {
+            "name": "🛡️ 21. SuperAdmin Dashboard",
+            "description": "Quản trị hệ thống — Chỉ dành cho role SuperAdmin.\n\n**Login Admin:** admin@360retail.com / 123456\n\nTất cả endpoint trong folder này yêu cầu header:\n`Authorization: Bearer {accessToken}` với token có role SuperAdmin.",
+            "item": [
+                {
+                    "name": "Login Admin ⭐",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    var json = pm.response.json();",
+                                    "    pm.environment.set('accessToken', json.accessToken);",
+                                    "    pm.test('Admin Login OK', function() {",
+                                    "        pm.expect(json.accessToken).to.be.a('string');",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"admin@360retail.com\",\n  \"password\": \"123456\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Đăng nhập tài khoản SuperAdmin. Token tự động lưu vào biến `accessToken`.\n\n**Lưu ý:** Decode JWT để kiểm tra claim `role` có chứa `SuperAdmin`."
+                    }
+                },
+                {
+                    "name": "Dashboard Overview",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/dashboard/overview",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "dashboard",
+                                "overview"
+                            ]
+                        },
+                        "description": "Tổng quan dashboard: doanh thu, MRR, số cửa hàng active/trial/expired, tỉ lệ chuyển đổi.\n\n**Response fields:**\n- `totalRevenue`: Tổng doanh thu tất cả thời gian (VND)\n- `monthlyRecurringRevenue`: Doanh thu tháng hiện tại\n- `activeStores`: Stores đang hoạt động\n- `trialStores`: Stores đang dùng thử\n- `expiredStores`: Stores hết hạn\n- `trialToPaidConversionRate`: % chuyển đổi trial → paid\n\n⚠️ Cache 10 phút."
+                    }
+                },
+                {
+                    "name": "Revenue Chart",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/dashboard/revenue-chart?from=2025-01-01&to=2026-12-31&groupBy=month",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "dashboard",
+                                "revenue-chart"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2025-01-01",
+                                    "description": "Ngày bắt đầu (mặc định 12 tháng trước)"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-12-31",
+                                    "description": "Ngày kết thúc (mặc định hôm nay)"
+                                },
+                                {
+                                    "key": "groupBy",
+                                    "value": "month",
+                                    "description": "Nhóm: day | week | month"
+                                }
+                            ]
+                        },
+                        "description": "Biểu đồ doanh thu theo thời gian.\n\n**Response:** `[{ date: '2026-01', revenue: 499000.00 }, ...]`\n\n**FE:** Dùng Line Chart hoặc Bar Chart. Cho phép chọn groupBy (ngày/tuần/tháng)."
+                    }
+                },
+                {
+                    "name": "Plan Distribution",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/super-admin/saas/dashboard/plan-distribution",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "super-admin",
+                                "saas",
+                                "dashboard",
+                                "plan-distribution"
+                            ]
+                        },
+                        "description": "Phân bổ gói dịch vụ đang active.\n\n**Response:** `[{ planName: 'Basic', count: 3 }, { planName: 'Pro', count: 1 }]`\n\n**FE:** Dùng Pie Chart / Donut Chart."
+                    }
+                },
+                {
+                    "name": "Funnel: Landing → Signup",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/super-admin/users/stats/funnel/landing-to-signup?from=2026-02-01&to=2026-03-31",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "super-admin",
+                                "users",
+                                "stats",
+                                "funnel",
+                                "landing-to-signup"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2026-02-01"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-03-31"
+                                }
+                            ]
+                        },
+                        "description": "Funnel tracking: Landing Page Views → Signups.\n\n**Response:** `[{ date, landingPageViews, signups, conversionRate }]`\n\n**Logic:** So sánh lượt xem landing (từ Redis) vs số đăng ký theo ngày."
+                    }
+                },
+                {
+                    "name": "Daily Registration Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/super-admin/users/stats/registrations?from=2026-02-01&to=2026-03-31",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "super-admin",
+                                "users",
+                                "stats",
+                                "registrations"
+                            ],
+                            "query": [
+                                {
+                                    "key": "from",
+                                    "value": "2026-02-01"
+                                },
+                                {
+                                    "key": "to",
+                                    "value": "2026-03-31"
+                                }
+                            ]
+                        },
+                        "description": "Thống kê đăng ký user mới theo ngày.\n\n**Response:** `[{ date: '2026-03-05', count: 3 }]`\n\n**FE:** Bar Chart."
+                    }
+                },
+                {
+                    "name": "Track Page View (Anonymous)",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/tracking/page-view",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "tracking",
+                                "page-view"
+                            ]
+                        },
+                        "description": "Ghi nhận 1 lượt xem landing page. KHÔNG cần auth.\n\n**Gọi từ FE:** 1 lần khi user mở landing page (useEffect + flag).\n\nData lưu trong Redis, dùng cho Funnel Stats."
+                    }
+                },
+                {
+                    "name": "Get Page Views by Date",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/tracking/page-views/2026-03-09",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "tracking",
+                                "page-views",
+                                "2026-03-09"
+                            ]
+                        },
+                        "description": "Xem tổng lượt xem landing page theo ngày cụ thể.\n\n**Response:** `{ success: true, date: '2026-03-09', count: 42 }`"
+                    }
+                },
+                {
+                    "name": "List All Users",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/super-admin/users",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "super-admin",
+                                "users"
+                            ]
+                        },
+                        "description": "Danh sách tất cả users.\n\n**Response:** `[{ id, email, isActivated, status, storeId, roles }]`"
+                    }
+                },
+                {
+                    "name": "Get User by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/super-admin/users/{{userId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "super-admin",
+                                "users",
+                                "{{userId}}"
+                            ]
+                        },
+                        "description": "Chi tiết 1 user."
+                    }
+                },
+                {
+                    "name": "Create User",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"newuser@test.com\",\n  \"password\": \"Test@123\",\n  \"role\": \"PotentialOwner\"\n}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/super-admin/users",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "super-admin",
+                                "users"
+                            ]
+                        },
+                        "description": "Tạo user mới. Roles: PotentialOwner, StoreOwner, SuperAdmin."
+                    }
+                },
+                {
+                    "name": "Delete User",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/identity/super-admin/users/{{userId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "identity",
+                                "super-admin",
+                                "users",
+                                "{{userId}}"
+                            ]
+                        },
+                        "description": "Xóa user. Response: 204 No Content."
+                    }
+                },
+                {
+                    "name": "[Admin] Get All Reviews",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews/admin?page=1&pageSize=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews",
+                                "admin"
+                            ],
+                            "query": [
+                                {
+                                    "key": "planId",
+                                    "value": "",
+                                    "disabled": true,
+                                    "description": "Filter theo plan (optional)"
+                                },
+                                {
+                                    "key": "rating",
+                                    "value": "",
+                                    "disabled": true,
+                                    "description": "Filter theo rating 1-5 (optional)"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "pageSize",
+                                    "value": "20"
+                                }
+                            ]
+                        },
+                        "description": "Xem tất cả reviews toàn hệ thống. Có thể filter theo plan hoặc rating."
+                    }
+                },
+                {
+                    "name": "[Admin] Reviews Dashboard",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews/admin/dashboard",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews",
+                                "admin",
+                                "dashboard"
+                            ]
+                        },
+                        "description": "Dashboard thống kê reviews — phân loại theo từng gói dịch vụ."
+                    }
+                },
+                {
+                    "name": "[Admin] Delete Review",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/plan-reviews/admin/{{reviewId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "plan-reviews",
+                                "admin",
+                                "{{reviewId}}"
+                            ]
+                        },
+                        "description": "Xóa review spam/vi phạm.\n\nResponse: `{ success: true, message: 'Đã xóa review thành công' }`"
+                    }
+                },
+                {
+                    "name": "Check Expiring Subscriptions",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/subscriptions/check-expiry?daysAhead=3",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "subscriptions",
+                                "check-expiry"
+                            ],
+                            "query": [
+                                {
+                                    "key": "daysAhead",
+                                    "value": "3",
+                                    "description": "Số ngày tới để kiểm tra (mặc định 3)"
+                                }
+                            ]
+                        },
+                        "description": "Kiểm tra subscription sắp hết hạn → gửi email cảnh báo.\n\nResponse: `{ count, details: [{ storeName, planName, endDate, daysRemaining, ownerEmail }] }`\n\n**Dùng cho:** Nút 'Gửi thông báo' trên admin panel, hoặc thiết lập cron job."
+                    }
+                },
+                {
+                    "name": "Get All Stores (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/saas/stores",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "saas",
+                                "stores"
+                            ]
+                        },
+                        "description": "Danh sách tất cả cửa hàng trong hệ thống. SuperAdmin xem toàn bộ."
+                    }
+                }
+            ]
         }
     ]
 }
