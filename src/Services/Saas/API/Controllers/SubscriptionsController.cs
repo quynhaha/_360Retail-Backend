@@ -63,6 +63,16 @@ public class SubscriptionsController : ControllerBase
     }
 
     /// <summary>
+    /// Get subscription status by storeId (for frontend — requires auth)
+    /// </summary>
+    [HttpGet("store/{storeId:guid}/status")]
+    public async Task<IActionResult> GetStoreSubscriptionStatusAuth(Guid storeId)
+    {
+        var status = await _subscriptionService.GetCurrentSubscriptionAsync(storeId);
+        return Ok(new { success = true, data = status });
+    }
+
+    /// <summary>
     /// Purchase a plan - returns VNPay payment URL
     /// </summary>
     [HttpPost("purchase")]

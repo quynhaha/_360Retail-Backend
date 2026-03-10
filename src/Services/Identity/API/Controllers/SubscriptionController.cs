@@ -21,6 +21,7 @@ public class SubscriptionController : ControllerBase
     /// Start 7-day trial for PotentialOwner. Creates trial store automatically.
     /// </summary>
     [HttpPost("start-trial")]
+    [Authorize(Roles = "PotentialOwner")]
     public async Task<IActionResult> StartTrial([FromBody] StartTrialDto? dto)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

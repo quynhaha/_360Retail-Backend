@@ -60,12 +60,12 @@ public class SuperAdminUserService : ISuperAdminUserService
     }
 
  
-    // CREATE USER — Admin chỉ được tạo PotentialOwner hoặc StoreOwner
+    // CREATE USER — Admin chỉ được tạo PotentialOwner (user tự start trial sau)
     public async Task<Guid> CreateAsync(CreateUserDto dto)
     {
-        var allowedRoles = new[] { "PotentialOwner", "StoreOwner" };
+        var allowedRoles = new[] { "PotentialOwner" };
         if (!allowedRoles.Contains(dto.RoleName))
-            throw new Exception($"Admin chỉ được tạo tài khoản {string.Join("/", allowedRoles)}. Các role khác do StoreOwner tự mời.");
+            throw new Exception($"Admin chỉ được tạo tài khoản PotentialOwner. User sẽ tự start trial hoặc mua gói.");
 
         if (await _db.AppUsers.AnyAsync(u => u.Email == dto.Email))
             throw new Exception("Email đã tồn tại");

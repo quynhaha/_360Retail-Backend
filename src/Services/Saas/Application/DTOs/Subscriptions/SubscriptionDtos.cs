@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace _360Retail.Services.Saas.Application.DTOs.Subscriptions;
 
-// Request to purchase a plan - requires validation
+// Request to purchase a plan
 public class PurchasePlanRequest
 {
     [Required(ErrorMessage = "PlanId là bắt buộc")]

@@ -41,7 +41,7 @@ public class StoresController : ControllerBase
     }
 
     // CREATE (for paid users - requires subscription purchase)
-    [Authorize(Roles = "SuperAdmin,StoreOwner")]
+    [Authorize(Roles = "StoreOwner")]
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateStoreDto dto)
     {
