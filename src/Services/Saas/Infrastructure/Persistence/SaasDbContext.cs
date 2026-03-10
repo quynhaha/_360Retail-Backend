@@ -191,6 +191,9 @@ public partial class SaasDbContext : DbContext
                 .WithMany(p => p.Payments)
                 .HasForeignKey(d => d.SubscriptionId)
                 .HasConstraintName("payments_subscription_id_fkey");
+
+            entity.Property(e => e.UserId)
+                .HasColumnName("user_id");
         });
 
         // PlanReview

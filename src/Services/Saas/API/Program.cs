@@ -160,6 +160,9 @@ app.UseSerilogRequestLogging();
 // Global Exception Handler - converts exceptions to proper HTTP responses
 app.UseGlobalExceptionHandler();
 
+// Protect internal APIs with shared key
+app.UseInternalApiKeyProtection();
+
 // Middleware
 app.UseSwagger();
 app.UseSwaggerUI();

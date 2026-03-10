@@ -12,6 +12,7 @@ namespace _360Retail.Services.CRM.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/feedback")]
+[Authorize(Roles = "StoreOwner,Manager,Staff")]
 public class FeedbackController : ControllerBase
 {
     private readonly IFeedbackService _feedbackService;

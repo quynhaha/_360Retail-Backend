@@ -321,7 +321,7 @@ public class AuthService : IAuthService
         try
         {
             var saasClient = _httpClientFactory.CreateClient("SaasService");
-            var response = await saasClient.GetAsync($"/api/subscriptions/store/{storeId}/status");
+            var response = await saasClient.GetAsync($"/api/subscriptions/internal/store/{storeId}/status");
             
             if (!response.IsSuccessStatusCode)
             {
@@ -370,7 +370,7 @@ public class AuthService : IAuthService
         try
         {
             var saasClient = _httpClientFactory.CreateClient("SaasService");
-            var response = await saasClient.GetAsync($"/api/stores/{storeId}/active-status");
+            var response = await saasClient.GetAsync($"/api/stores/internal/{storeId}/active-status");
             
             if (!response.IsSuccessStatusCode)
             {
@@ -474,7 +474,7 @@ public class AuthService : IAuthService
             IsTrial = true
         };
 
-        var response = await saasClient.PostAsJsonAsync("/api/stores/trial", createStoreRequest);
+        var response = await saasClient.PostAsJsonAsync("/api/stores/internal/trial", createStoreRequest);
         
         if (!response.IsSuccessStatusCode)
         {

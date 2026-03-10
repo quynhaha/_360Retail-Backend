@@ -27,8 +27,8 @@ public class StoresController : ControllerBase
     }
 
     // CREATE TRIAL STORE (called by Identity service during StartTrial)
-    [AllowAnonymous]  // Internal API - should be protected by API key in production
-    [HttpPost("trial")]
+    [AllowAnonymous]  // Protected by InternalApiKeyMiddleware (checks /internal/ path)
+    [HttpPost("internal/trial")]
     public async Task<IActionResult> CreateTrialStore([FromBody] CreateTrialStoreRequest request)
     {
         var store = await _storeService.CreateTrialStoreAsync(request.StoreName);
@@ -119,8 +119,8 @@ public record CreateTrialStoreRequest(string StoreName, bool IsTrial = true);
 
 
     // CHECK STORE ACTIVE STATUS (internal API for Identity service)
-    [AllowAnonymous]  // Internal service-to-service call
-    [HttpGet("{storeId:guid}/active-status")]
+    [AllowAnonymous]  // Protected by InternalApiKeyMiddleware (checks /internal/ path)
+    [HttpGet("internal/{storeId:guid}/active-status")]
     public async Task<IActionResult> GetStoreActiveStatus(Guid storeId)
     {
         var store = await _storeService.GetByIdAsync(storeId, includeInactive: true);

@@ -54,8 +54,8 @@ public class SubscriptionsController : ControllerBase
     /// <summary>
     /// Internal API: Get subscription status by storeId (called by Identity service)
     /// </summary>
-    [AllowAnonymous]  // Internal API - should be protected by API key in production
-    [HttpGet("store/{storeId:guid}/status")]
+    [AllowAnonymous]  // Protected by InternalApiKeyMiddleware (checks /internal/ path)
+    [HttpGet("internal/store/{storeId:guid}/status")]
     public async Task<IActionResult> GetStoreSubscriptionStatus(Guid storeId)
     {
         var status = await _subscriptionService.GetCurrentSubscriptionAsync(storeId);

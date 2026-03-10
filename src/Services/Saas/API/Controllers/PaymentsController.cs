@@ -9,6 +9,7 @@ namespace _360Retail.Services.Saas.API.Controllers;
 
 [ApiController]
 [Route("api/payments")]
+[Authorize]
 public class PaymentsController : ControllerBase
 {
     private readonly ISubscriptionService _subscriptionService;
@@ -91,6 +92,7 @@ public class PaymentsController : ControllerBase
     /// <summary>
     /// VNPay return URL - User is redirected here after payment
     /// </summary>
+    [AllowAnonymous]  // VNPay callback — no JWT
     [HttpGet("vnpay-return")]
     public async Task<IActionResult> VNPayReturn()
     {
@@ -149,6 +151,7 @@ public class PaymentsController : ControllerBase
     /// Check payment status — FE polls this after showing QR code
     /// Returns: Pending, Completed, Failed, Expired
     /// </summary>
+    [AllowAnonymous]  // FE polls by paymentId during payment flow
     [HttpGet("{paymentId}/status")]
     public async Task<IActionResult> GetPaymentStatus(Guid paymentId)
     {
