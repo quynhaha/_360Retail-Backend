@@ -1,4 +1,4 @@
-﻿using _360Retail.Services.Identity.Application.Interfaces;
+using _360Retail.Services.Identity.Application.Interfaces;
 using _360Retail.Services.Identity.API.Hubs;
 using _360Retail.Shared.Common.Middleware;
 using _360Retail.Shared.Email;
@@ -64,10 +64,14 @@ builder.Services.AddScoped<IEmailService, ResendEmailService>();
 
 #region ===== DATABASE =====
 builder.Services.AddDbContext<IdentityDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null)));
 
 builder.Services.AddDbContext<SaasDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null)));
 #endregion
 
 #region ===== REDIS CACHE =====

@@ -1,4 +1,4 @@
-﻿using _360Retail.Services.Sales.Infrastructure.Persistence;
+using _360Retail.Services.Sales.Infrastructure.Persistence;
 using _360Retail.Shared.Common.Middleware; 
 using Microsoft.EntityFrameworkCore;
 using _360Retail.Services.Sales.Application.Interfaces;
@@ -23,7 +23,9 @@ var connString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 
 builder.Services.AddDbContext<SalesDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null)));
 
 // ===== REDIS CACHE =====
 var redisConn = builder.Configuration.GetConnectionString("Redis");

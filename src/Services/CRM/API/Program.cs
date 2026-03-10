@@ -99,7 +99,9 @@ builder.Services.AddAuthentication(options =>
 
 // DB Context
 builder.Services.AddDbContext<CrmDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null)));
 
 // Repositories
 builder.Services.AddScoped<ILoyaltyRuleRepository, LoyaltyRuleRepository>();

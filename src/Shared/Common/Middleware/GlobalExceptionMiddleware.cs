@@ -51,6 +51,11 @@ public class GlobalExceptionMiddleware
             
             KeyNotFoundException knf => (404, ApiErrorResponse.FromException(knf.Message, "NOT_FOUND")),
 
+            // Database transient failures (EF Core/Npgsql connection issues) → 503
+            InvalidOperationException iex when iex.Message.Contains("transient failure", StringComparison.OrdinalIgnoreCase)
+                => (503, ApiErrorResponse.FromException(
+                    "Hệ thống đang tải. Vui lòng thử lại sau vài giây.", "SERVICE_UNAVAILABLE")),
+
             InvalidOperationException iex => (409, ApiErrorResponse.FromException(iex.Message, "CONFLICT")),
             
             // Generic exceptions - try to infer status code from message

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using _360Retail.Shared.Common.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -78,7 +78,9 @@ builder.Services.AddSwaggerGen(c =>
 // DbContext
 builder.Services.AddDbContext<SaasDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("SaasDb")
+        builder.Configuration.GetConnectionString("SaasDb"),
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null)
     )
 );
 

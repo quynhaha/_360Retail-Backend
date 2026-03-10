@@ -54,7 +54,7 @@ services:
     container_name: 360retail-identity-api
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345;Maximum Pool Size=20
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345;Maximum Pool Size=10
       - ServiceUrls__HrService=http://hr-api:8080
       - ServiceUrls__SaasService=http://saas-api:8080
       - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID}
@@ -85,7 +85,7 @@ services:
     container_name: 360retail-saas-api
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
-      - ConnectionStrings__SaasDb=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345;Maximum Pool Size=20
+      - ConnectionStrings__SaasDb=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345;Maximum Pool Size=10
       - ServiceUrls__IdentityService=http://identity-api:8080
       - InternalApi__Key=${INTERNAL_API_KEY:-360retail-internal-secret-key-2026}
       - JwtSettings__Key=${JWT_SECRET_KEY:-THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL}
@@ -120,7 +120,7 @@ services:
     container_name: 360retail-sales-api
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345;Maximum Pool Size=20
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345;Maximum Pool Size=10
       # Cloudinary Configuration - Set these in .env file
       - Cloudinary__CloudName=${CLOUDINARY_CLOUD_NAME}
       - Cloudinary__ApiKey=${CLOUDINARY_API_KEY}
@@ -152,7 +152,7 @@ services:
     container_name: 360retail-hr-api
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345;Maximum Pool Size=20
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345;Maximum Pool Size=10
       - ServiceUrls__IdentityService=http://identity-api:8080
       - InternalApi__Key=${INTERNAL_API_KEY:-360retail-internal-secret-key-2026}
       - JwtSettings__Key=${JWT_SECRET_KEY:-THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL}
@@ -181,7 +181,7 @@ services:
     container_name: 360retail-crm-api
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345;Maximum Pool Size=20
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=360RetailDB;Username=postgres;Password=12345;Maximum Pool Size=10
       - JwtSettings__Key=${JWT_SECRET_KEY:-THIS_IS_A_VERY_LONG_AND_SECURE_SECRET_KEY_360RETAIL}
       - JwtSettings__Issuer=360Retail_Identity
       - JwtSettings__Audience=360Retail_Users

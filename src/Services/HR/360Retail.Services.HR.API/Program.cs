@@ -23,7 +23,9 @@ builder.Host.UseSerilog((context, config) => config
 
 #region ===== DATABASE =====
 builder.Services.AddDbContext<HrDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null)));
 #endregion
 
 #region ===== HTTP CLIENT FOR IDENTITY SERVICE =====
