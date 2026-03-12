@@ -5,10 +5,18 @@ services:
   postgres:
     restart: always
     ports: [] # Don't expose DB port in production
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   redis:
     restart: always
     ports: [] # Don't expose Redis port in production
+    deploy:
+      resources:
+        limits:
+          memory: 64M
 
   pgadmin:
     profiles:
@@ -18,28 +26,52 @@ services:
     restart: always
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   saas-api:
     restart: always
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+    deploy:
+      resources:
+        limits:
+          memory: 200M
 
   sales-api:
     restart: always
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+    deploy:
+      resources:
+        limits:
+          memory: 200M
 
   hr-api:
     restart: always
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+    deploy:
+      resources:
+        limits:
+          memory: 200M
 
   crm-api:
     restart: always
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+    deploy:
+      resources:
+        limits:
+          memory: 200M
 
   api-gateway:
     restart: always
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+    deploy:
+      resources:
+        limits:
+          memory: 200M

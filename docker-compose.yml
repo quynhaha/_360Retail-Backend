@@ -4,8 +4,16 @@ services:
     container_name: 360retail-db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 12345
+      POSTGRES_PASSWORD: "12345"
       POSTGRES_DB: 360RetailDB
+      POSTGRES_HOST_AUTH_METHOD: trust
+    command: >
+      postgres
+      -c shared_buffers=128MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=64MB
+      -c effective_cache_size=256MB
+      -c max_connections=50
     ports:
       - "5433:5432"
     volumes:
