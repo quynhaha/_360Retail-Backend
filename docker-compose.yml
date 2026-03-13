@@ -6,7 +6,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: "12345"
       POSTGRES_DB: 360RetailDB
-      POSTGRES_HOST_AUTH_METHOD: trust
     command: >
       postgres
       -c shared_buffers=128MB
@@ -14,8 +13,8 @@ services:
       -c maintenance_work_mem=64MB
       -c effective_cache_size=256MB
       -c max_connections=50
-    ports:
-      - "5433:5432"
+    # ports:  # Không expose DB ra ngoài - chỉ truy cập qua Docker network
+    #   - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d
@@ -30,8 +29,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: 360retail-redis
-    ports:
-      - "6379:6379"
+    # ports:  # Không expose Redis ra ngoài
+    #   - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
