@@ -38,7 +38,7 @@ public class CustomerController : ControllerBase
     public async Task<IActionResult> GetById(Guid id)
     {
         var customer = await _customerService.GetByIdAsync(id, GetStoreIdFromToken());
-        if (customer == null) return NotFound(new { error = "Customer not found" });
+        if (customer == null) return NotFound(new { error = "Không tìm thấy khách hàng" });
         return Ok(new { data = customer });
     }
 
@@ -62,7 +62,7 @@ public class CustomerController : ControllerBase
         try
         {
             var customer = await _customerService.UpdateAsync(id, GetStoreIdFromToken(), dto);
-            if (customer == null) return NotFound(new { error = "Customer not found" });
+            if (customer == null) return NotFound(new { error = "Không tìm thấy khách hàng" });
             return Ok(new { data = customer });
         }
         catch (InvalidOperationException ex)
@@ -75,7 +75,7 @@ public class CustomerController : ControllerBase
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await _customerService.DeleteAsync(id, GetStoreIdFromToken());
-        if (!result) return NotFound(new { error = "Customer not found" });
+        if (!result) return NotFound(new { error = "Không tìm thấy khách hàng" });
         return NoContent();
     }
 }

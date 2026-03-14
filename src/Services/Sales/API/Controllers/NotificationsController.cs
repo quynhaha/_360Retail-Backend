@@ -31,7 +31,7 @@ public class NotificationsController : ControllerBase
     {
         var storeId = User.FindFirst("store_id")?.Value;
         if (string.IsNullOrEmpty(storeId))
-            return BadRequest(new { message = "Store context required" });
+            return BadRequest(new { message = "Cần ngữ cảnh cửa hàng" });
 
         var storeGuid = Guid.Parse(storeId);
 
@@ -57,7 +57,7 @@ public class NotificationsController : ControllerBase
             ?? User.FindFirst("email")?.Value;
 
         if (string.IsNullOrEmpty(ownerEmail))
-            return BadRequest(new { message = "Cannot determine owner email" });
+            return BadRequest(new { message = "Không xác định được email chủ cửa hàng" });
 
         // Get store name
         var storeName = await _db.Database

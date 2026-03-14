@@ -105,7 +105,7 @@ public class SuperAdminDashboardController : ControllerBase
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (sub == null)
-            return NotFound(new { success = false, message = "Subscription not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy gói đăng ký" });
 
         if (sub.Status == "Cancelled")
             return BadRequest(new { success = false, message = "Subscription đã bị hủy trước đó" });
@@ -127,7 +127,7 @@ public class SuperAdminDashboardController : ControllerBase
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (sub == null)
-            return NotFound(new { success = false, message = "Subscription not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy gói đăng ký" });
 
         var oldEnd = sub.EndDate;
         sub.EndDate = (sub.EndDate ?? DateTime.UtcNow).AddDays(request.Days);

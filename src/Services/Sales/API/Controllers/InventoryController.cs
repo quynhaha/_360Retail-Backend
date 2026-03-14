@@ -58,7 +58,7 @@ public class InventoryController : BaseApiController
         var storeId = GetCurrentStoreId();
         var ticket = await _inventoryService.GetByIdAsync(id, storeId);
         if (ticket == null)
-            return NotFound(new { success = false, message = "Inventory ticket not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy phiếu kho" });
 
         return Ok(new { success = true, data = ticket });
     }

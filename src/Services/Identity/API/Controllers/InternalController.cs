@@ -31,7 +31,7 @@ public class InternalController : ControllerBase
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == id);
         
         if (user == null)
-            return NotFound(new { success = false, message = "User not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy người dùng" });
 
         return Ok(new
         {
@@ -50,7 +50,7 @@ public class InternalController : ControllerBase
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == id);
         
         if (user == null)
-            return NotFound(new { success = false, message = "User not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy người dùng" });
 
         // Partial update
         if (!string.IsNullOrWhiteSpace(dto.UserName))
@@ -76,7 +76,7 @@ public class InternalController : ControllerBase
         if (dto == null || string.IsNullOrEmpty(dto.RoleInStore))
         {
             _logger.LogDebug("DTO is null or RoleInStore is empty");
-            return BadRequest(new { success = false, message = "RoleInStore is required" });
+            return BadRequest(new { success = false, message = "Cần có vai trò trong cửa hàng" });
         }
         
         // 1. Update RoleInStore in user_store_access
@@ -86,14 +86,14 @@ public class InternalController : ControllerBase
         _logger.LogDebug("Found access record: {Found}", access != null ? $"Yes, current role={access.RoleInStore}" : "No");
         
         if (access == null)
-            return NotFound(new { success = false, message = "User store access not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy quyền truy cập cửa hàng" });
 
         // Validate role
         var validRoles = new[] { "Staff", "Manager", "Owner" };
         if (!validRoles.Contains(dto.RoleInStore))
         {
             _logger.LogDebug("Invalid role: {Role}", dto.RoleInStore);
-            return BadRequest(new { success = false, message = "Invalid role. Must be: Staff, Manager, or Owner" });
+            return BadRequest(new { success = false, message = "Vai trò không hợp lệ. Phải là: Staff, Manager hoặc Owner" });
         }
 
         _logger.LogDebug("Updating RoleInStore from {OldRole} to {NewRole}", access.RoleInStore, dto.RoleInStore);
@@ -168,7 +168,7 @@ public class InternalController : ControllerBase
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == userId);
         
         if (user == null)
-            return NotFound(new { success = false, message = "User not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy người dùng" });
 
         // Update status from Trial to Active
         user.Status = "Active";
@@ -194,7 +194,7 @@ public class InternalController : ControllerBase
         var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == userId);
         
         if (user == null)
-            return NotFound(new { success = false, message = "User not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy người dùng" });
 
         return Ok(new { 
             success = true,

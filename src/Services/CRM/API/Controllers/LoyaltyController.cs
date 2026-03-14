@@ -108,7 +108,7 @@ public class LoyaltyController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new { error = "Customer not found" });
+            return NotFound(new { error = "Không tìm thấy khách hàng" });
         }
     }
 
@@ -122,7 +122,7 @@ public class LoyaltyController : ControllerBase
     [HttpPost("customers/{customerId}/redeem")]
     public async Task<IActionResult> RedeemPoints(Guid customerId, [FromBody] RedeemPointsRequestDto request)
     {
-        if (customerId != request.CustomerId) return BadRequest("Customer ID mismatch");
+        if (customerId != request.CustomerId) return BadRequest("ID khách hàng không khớp");
 
         try
         {
@@ -135,7 +135,7 @@ public class LoyaltyController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new { error = "Customer not found" });
+            return NotFound(new { error = "Không tìm thấy khách hàng" });
         }
     }
 
@@ -151,7 +151,7 @@ public class LoyaltyController : ControllerBase
         }
         catch (KeyNotFoundException)
         {
-            return NotFound(new { error = "Customer not found" });
+            return NotFound(new { error = "Không tìm thấy khách hàng" });
         }
     }
 }

@@ -1,7 +1,8 @@
-﻿using _360Retail.Services.Identity.Application.DTOs;
+using _360Retail.Services.Identity.Application.DTOs;
 using _360Retail.Services.Identity.Application.Interfaces;
 using _360Retail.Services.Identity.Domain.Entities;
 using _360Retail.Services.Identity.Infrastructure.Persistence;
+using _360Retail.Shared.Common.Exceptions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -39,11 +40,11 @@ public class UserInvitationService : IUserInvitationService
     public async Task InviteUserAsync(InviteUserDto dto)
     {
         if (_db.AppUsers.Any(u => u.Email == dto.Email))
-            throw new Exception("Email đã tồn tại");
+            throw BusinessException.Duplicate("Email", dto.Email);
 
         var role = _db.AppRoles.FirstOrDefault(r => r.RoleName == dto.Role);
         if (role == null)
-            throw new Exception($"Không tìm thấy vai trò '{dto.Role}'");
+            throw BusinessException.NotFound("Role", dto.Role);
 
         // Check max_employees limit from store's subscription plan
         var currentStaffCount = await _db.UserStoreAccess
@@ -52,9 +53,10 @@ public class UserInvitationService : IUserInvitationService
         var maxEmployees = await GetMaxEmployeesForStoreAsync(dto.StoreId);
         if (maxEmployees.HasValue && currentStaffCount >= maxEmployees.Value)
         {
-            throw new Exception(
+            throw new BusinessException(
                 $"Đã đạt giới hạn {maxEmployees.Value} nhân viên của gói hiện tại. " +
-                $"Vui lòng nâng cấp gói để mời thêm nhân viên.");
+                $"Vui lòng nâng cấp gói để mời thêm nhân viên.",
+                "PLAN_LIMIT_EXCEEDED", 403);
         }
 
         var tempPassword = GenerateTempPassword();

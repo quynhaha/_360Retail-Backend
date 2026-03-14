@@ -56,7 +56,7 @@ public class SuperAdminPlansController : ControllerBase
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (plan == null)
-            return NotFound(new { success = false, message = "Plan not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy gói dịch vụ" });
 
         return Ok(new { success = true, data = new
         {
@@ -106,7 +106,7 @@ public class SuperAdminPlansController : ControllerBase
     {
         var plan = await _db.ServicePlans.FindAsync(id);
         if (plan == null)
-            return NotFound(new { success = false, message = "Plan not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy gói dịch vụ" });
 
         if (!string.IsNullOrWhiteSpace(request.PlanName))
             plan.PlanName = request.PlanName;
@@ -125,7 +125,7 @@ public class SuperAdminPlansController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        return Ok(new { success = true, data = plan, message = "Plan updated" });
+        return Ok(new { success = true, data = plan, message = "Cập nhật gói dịch vụ thành công" });
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public class SuperAdminPlansController : ControllerBase
             .FirstOrDefaultAsync(p => p.Id == id);
 
         if (plan == null)
-            return NotFound(new { success = false, message = "Plan not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy gói dịch vụ" });
 
         var activeCount = plan.Subscriptions.Count(s => s.Status == "Active" || s.Status == "Trial");
         if (activeCount > 0)
@@ -148,7 +148,7 @@ public class SuperAdminPlansController : ControllerBase
         plan.IsActive = false;
         await _db.SaveChangesAsync();
 
-        return Ok(new { success = true, message = "Plan deactivated" });
+        return Ok(new { success = true, message = "Đã vô hiệu hóa gói dịch vụ" });
     }
 }
 

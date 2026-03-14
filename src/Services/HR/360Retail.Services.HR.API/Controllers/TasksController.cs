@@ -33,11 +33,11 @@ public class TasksController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ - chưa gán cửa hàng" });
 
         var appUserId = GetAppUserId();
         if (appUserId == null)
-            return Unauthorized(new { success = false, message = "Invalid token" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ" });
 
         var roles = GetCurrentRoles();
 
@@ -65,7 +65,7 @@ public class TasksController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ - chưa gán cửa hàng" });
 
         var tasks = await _taskService.GetAllByStoreAsync(storeId.Value, includeInactive);
         return Ok(new { success = true, data = tasks });
@@ -79,11 +79,11 @@ public class TasksController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ - chưa gán cửa hàng" });
 
         var appUserId = GetAppUserId();
         if (appUserId == null)
-            return Unauthorized(new { success = false, message = "Invalid token" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ" });
 
         var tasks = await _taskService.GetMyTasksAsync(storeId.Value, appUserId.Value, includeInactive);
         return Ok(new { success = true, data = tasks });
@@ -97,11 +97,11 @@ public class TasksController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ - chưa gán cửa hàng" });
 
         var task = await _taskService.GetByIdAsync(id, storeId.Value);
         if (task == null)
-            return NotFound(new { success = false, message = "Task not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy công việc" });
 
         return Ok(new { success = true, data = task });
     }
@@ -119,11 +119,11 @@ public class TasksController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ - chưa gán cửa hàng" });
 
         var appUserId = GetAppUserId();
         if (appUserId == null)
-            return Unauthorized(new { success = false, message = "Invalid token" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ" });
 
         var roles = GetCurrentRoles();
 
@@ -131,7 +131,7 @@ public class TasksController : ControllerBase
         {
             var success = await _taskService.UpdateAsync(id, storeId.Value, dto, appUserId.Value, roles);
             if (!success)
-                return NotFound(new { success = false, message = "Task not found" });
+                return NotFound(new { success = false, message = "Không tìm thấy công việc" });
 
             return Ok(new { success = true, message = "Task updated successfully" });
         }
@@ -149,15 +149,15 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> UpdateStatus(Guid id, [FromQuery] string status)
     {
         if (string.IsNullOrWhiteSpace(status))
-            return BadRequest(new { success = false, message = "Status is required" });
+            return BadRequest(new { success = false, message = "Cần nhập trạng thái" });
 
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ - chưa gán cửa hàng" });
 
         var appUserId = GetAppUserId();
         if (appUserId == null)
-            return Unauthorized(new { success = false, message = "Invalid token" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ" });
 
         var roles = GetCurrentRoles();
 
@@ -165,7 +165,7 @@ public class TasksController : ControllerBase
         {
             var success = await _taskService.UpdateStatusAsync(id, storeId.Value, appUserId.Value, roles, status);
             if (!success)
-                return NotFound(new { success = false, message = "Task not found" });
+                return NotFound(new { success = false, message = "Không tìm thấy công việc" });
 
             return Ok(new { success = true, message = "Status updated successfully" });
         }
@@ -188,11 +188,11 @@ public class TasksController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ - chưa gán cửa hàng" });
 
         var success = await _taskService.DeleteAsync(id, storeId.Value);
         if (!success)
-            return NotFound(new { success = false, message = "Task not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy công việc" });
 
         return Ok(new { success = true, message = "Task deleted successfully" });
     }

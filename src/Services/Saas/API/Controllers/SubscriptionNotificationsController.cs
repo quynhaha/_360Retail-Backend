@@ -114,7 +114,7 @@ public class SubscriptionNotificationsController : ControllerBase
     {
         var storeId = User.FindFirst("store_id")?.Value;
         if (string.IsNullOrEmpty(storeId))
-            return BadRequest(new { message = "Store context required" });
+            return BadRequest(new { message = "Cần ngữ cảnh cửa hàng" });
 
         var storeGuid = Guid.Parse(storeId);
 

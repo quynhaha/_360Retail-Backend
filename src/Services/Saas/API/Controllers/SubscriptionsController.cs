@@ -45,7 +45,7 @@ public class SubscriptionsController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "No store assigned" });
+            return Unauthorized(new { success = false, message = "Chưa được gán cửa hàng" });
 
         var status = await _subscriptionService.GetCurrentSubscriptionAsync(storeId.Value);
         return Ok(new { success = true, data = status });
@@ -80,11 +80,11 @@ public class SubscriptionsController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "No store assigned" });
+            return Unauthorized(new { success = false, message = "Chưa được gán cửa hàng" });
 
         var userId = GetUserId();
         if (userId == null)
-            return Unauthorized(new { success = false, message = "Invalid token" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ" });
 
         try
         {

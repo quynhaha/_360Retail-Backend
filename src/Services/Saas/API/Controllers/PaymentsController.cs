@@ -46,10 +46,10 @@ public class PaymentsController : ControllerBase
         var payment = await _subscriptionService.GetPaymentByIdAsync(paymentId);
         
         if (payment == null)
-            return NotFound(new { success = false, message = "Payment not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy thanh toán" });
 
         if (payment.Status != "Pending")
-            return BadRequest(new { success = false, message = "Payment is not in pending status" });
+            return BadRequest(new { success = false, message = "Thanh toán không ở trạng thái chờ xử lý" });
 
         // Get plan info
         var planInfo = await _subscriptionService.GetPaymentPlanInfoAsync(paymentId);
@@ -105,7 +105,7 @@ public class PaymentsController : ControllerBase
         if (!isValid)
         {
             var frontendUrlInvalid = _config["ServiceUrls:FrontendUrl"] ?? "http://localhost:3000";
-            var invalidMessage = "Invalid signature from VNPay";
+            var invalidMessage = "Chữ ký từ VNPay không hợp lệ";
             var invalidRedirect = $"{frontendUrlInvalid}/payment/failed?paymentId={Guid.Empty}&message={Uri.EscapeDataString(invalidMessage)}";
             return Redirect(invalidRedirect);
         }
@@ -158,7 +158,7 @@ public class PaymentsController : ControllerBase
         var payment = await _subscriptionService.GetPaymentByIdAsync(paymentId);
 
         if (payment == null)
-            return NotFound(new { success = false, message = "Payment not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy thanh toán" });
 
         return Ok(new
         {

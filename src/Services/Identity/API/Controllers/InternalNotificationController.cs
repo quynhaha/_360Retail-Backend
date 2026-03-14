@@ -39,7 +39,7 @@ public class InternalNotificationController : ControllerBase
         if (string.IsNullOrEmpty(expectedKey) || providedKey != expectedKey)
         {
             _logger.LogWarning("Invalid internal API key for notification creation");
-            return Unauthorized(new { success = false, message = "Invalid API key" });
+            return Unauthorized(new { success = false, message = "API key không hợp lệ" });
         }
 
         var result = await _notificationService.CreateAsync(dto);
@@ -56,7 +56,7 @@ public class InternalNotificationController : ControllerBase
         var providedKey = Request.Headers["X-Internal-Key"].FirstOrDefault();
 
         if (string.IsNullOrEmpty(expectedKey) || providedKey != expectedKey)
-            return Unauthorized(new { success = false, message = "Invalid API key" });
+            return Unauthorized(new { success = false, message = "API key không hợp lệ" });
 
         var results = new List<NotificationDto>();
         foreach (var dto in dtos)

@@ -86,17 +86,23 @@ public class GlobalExceptionMiddleware
         // Check for common business logic patterns in exception message
         var message = ex.Message.ToLower();
         
-        if (message.Contains("already exists") || message.Contains("duplicate"))
+        if (message.Contains("already exists") || message.Contains("duplicate") 
+            || message.Contains("đã tồn tại") || message.Contains("trùng"))
             return (409, ApiErrorResponse.FromException(ex.Message, "DUPLICATE"));
         
-        if (message.Contains("not found"))
+        if (message.Contains("not found") || message.Contains("không tìm thấy"))
             return (404, ApiErrorResponse.FromException(ex.Message, "NOT_FOUND"));
         
-        if (message.Contains("invalid") || message.Contains("incorrect"))
+        if (message.Contains("invalid") || message.Contains("incorrect")
+            || message.Contains("không hợp lệ"))
             return (400, ApiErrorResponse.FromException(ex.Message, "INVALID_INPUT"));
         
-        if (message.Contains("unauthorized") || message.Contains("access denied"))
+        if (message.Contains("unauthorized") || message.Contains("access denied")
+            || message.Contains("không có quyền"))
             return (403, ApiErrorResponse.FromException(ex.Message, "FORBIDDEN"));
+        
+        if (message.Contains("giới hạn") || message.Contains("limit"))
+            return (403, ApiErrorResponse.FromException(ex.Message, "PLAN_LIMIT_EXCEEDED"));
 
         // For truly unknown errors - hide details in production
         var errorMessage = _env.IsDevelopment() 

@@ -56,12 +56,12 @@ public class EmployeesController : ControllerBase
         var storeId = GetStoreId();
 
         if (appUserId == null || storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ" });
 
         var profile = await _employeeService.GetByAppUserIdAsync(appUserId.Value, storeId.Value);
 
         if (profile == null)
-            return NotFound(new { success = false, message = "Employee profile not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy hồ sơ nhân viên" });
 
         return Ok(new { success = true, data = profile });
     }
@@ -77,14 +77,14 @@ public class EmployeesController : ControllerBase
         var storeId = GetStoreId();
 
         if (appUserId == null || storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ" });
 
         try
         {
             var success = await _employeeService.UpdateProfileAsync(appUserId.Value, storeId.Value, dto);
 
             if (!success)
-                return NotFound(new { success = false, message = "Employee profile not found" });
+                return NotFound(new { success = false, message = "Không tìm thấy hồ sơ nhân viên" });
 
             return Ok(new { success = true, message = "Profile updated successfully" });
         }
@@ -105,10 +105,10 @@ public class EmployeesController : ControllerBase
         var storeId = GetStoreId();
 
         if (appUserId == null || storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ" });
 
         if (file == null || file.Length == 0)
-            return BadRequest(new { success = false, message = "No file provided" });
+            return BadRequest(new { success = false, message = "Không có file nào được chọn" });
 
         try
         {
@@ -116,7 +116,7 @@ public class EmployeesController : ControllerBase
             var success = await _employeeService.UpdateAvatarAsync(appUserId.Value, storeId.Value, avatarUrl);
 
             if (!success)
-                return NotFound(new { success = false, message = "Employee not found" });
+                return NotFound(new { success = false, message = "Không tìm thấy nhân viên" });
 
             return Ok(new { success = true, data = new { avatarUrl }, message = "Avatar uploaded successfully" });
         }
@@ -139,7 +139,7 @@ public class EmployeesController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ - chưa gán cửa hàng" });
 
         var employees = await _employeeService.GetAllByStoreIdAsync(storeId.Value, includeInactive);
         return Ok(new { success = true, data = employees });
@@ -154,11 +154,11 @@ public class EmployeesController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ - chưa gán cửa hàng" });
 
         var employee = await _employeeService.GetByIdAsync(id, storeId.Value);
         if (employee == null)
-            return NotFound(new { success = false, message = "Employee not found in your store" });
+            return NotFound(new { success = false, message = "Không tìm thấy nhân viên trong cửa hàng của bạn" });
 
         return Ok(new { success = true, data = employee });
     }
@@ -173,13 +173,13 @@ public class EmployeesController : ControllerBase
     {
         var storeId = GetStoreId();
         if (storeId == null)
-            return Unauthorized(new { success = false, message = "Invalid token - no store assigned" });
+            return Unauthorized(new { success = false, message = "Token không hợp lệ - chưa gán cửa hàng" });
 
         try
         {
             var success = await _employeeService.UpdateByOwnerAsync(id, storeId.Value, dto);
             if (!success)
-                return NotFound(new { success = false, message = "Employee not found in your store" });
+                return NotFound(new { success = false, message = "Không tìm thấy nhân viên trong cửa hàng của bạn" });
 
             return Ok(new { success = true, message = "Employee updated successfully" });
         }

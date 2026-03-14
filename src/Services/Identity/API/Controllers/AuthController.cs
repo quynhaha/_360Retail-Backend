@@ -1,4 +1,4 @@
-﻿using _360Retail.Services.Identity.Application.DTOs;
+using _360Retail.Services.Identity.Application.DTOs;
 using _360Retail.Services.Identity.Application.Interfaces;
 using _360Retail.Services.Identity.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -169,7 +169,7 @@ namespace _360Retail.Services.Identity.API.Controllers
                 .ToString().Replace("Bearer ", "");
 
             if (string.IsNullOrEmpty(token))
-                return BadRequest(new { message = "No token provided" });
+                return BadRequest(new { message = "Không có token" });
 
             // Parse token to get expiry
             var handler = new JwtSecurityTokenHandler();

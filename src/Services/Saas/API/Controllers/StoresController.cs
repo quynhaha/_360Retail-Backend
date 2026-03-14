@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using _360Retail.Services.Saas.Application.DTOs.Stores;
@@ -17,13 +17,16 @@ public class StoresController : ControllerBase
 {
     private readonly IStoreService _storeService;
     private readonly IIdentityClient _identityClient;
+    private readonly ILogger<StoresController> _logger;
 
     public StoresController(
         IStoreService storeService,
-        IIdentityClient identityClient)
+        IIdentityClient identityClient,
+        ILogger<StoresController> logger)
     {
         _storeService = storeService;
         _identityClient = identityClient;
+        _logger = logger;
     }
 
     // CREATE TRIAL STORE (called by Identity service during StartTrial)
@@ -49,7 +52,7 @@ public class StoresController : ControllerBase
         var statusClaim = User.FindFirst("status")?.Value;
         if (statusClaim == "Trial")
         {
-             return BadRequest(new { message = "Trial accounts cannot create additional stores. Please upgrade your subscription." });
+             return BadRequest(new { success = false, message = "Tài khoản dùng thử không thể tạo thêm cửa hàng. Vui lòng nâng cấp gói dịch vụ." });
         }
 
         // Active (paid) users must provide a PlanId to purchase subscription for new store
@@ -196,11 +199,11 @@ public record CreateTrialStoreRequest(string StoreName, bool IsTrial = true);
         var storeIdClaim = User.FindFirst("store_id")?.Value;
         
         if (string.IsNullOrEmpty(storeIdClaim) || !Guid.TryParse(storeIdClaim, out var storeId))
-            return BadRequest(new { message = "User is not assigned to any store" });
+            return BadRequest(new { success = false, message = "Người dùng chưa được gán vào cửa hàng nào" });
 
         var store = await _storeService.GetByIdAsync(storeId);
         if (store == null)
-            return NotFound(new { message = "Store not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy cửa hàng" });
 
         // Also include role in store from JWT
         var roleInStore = User.FindFirst("store_role")?.Value ?? "Unknown";
@@ -222,14 +225,22 @@ public record CreateTrialStoreRequest(string StoreName, bool IsTrial = true);
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, UpdateStoreDto dto)
     {
+        var userEmail = User.FindFirstValue(ClaimTypes.Email) ?? "unknown";
         var roles = User.FindAll(ClaimTypes.Role)
                         .Select(r => r.Value)
                         .ToList();
+        var rolesStr = string.Join(", ", roles);
+
+        _logger.LogInformation("Cập nhật cửa hàng: StoreId={StoreId}, User={Email}, Roles={Roles}",
+            id, userEmail, rolesStr);
+
         if (roles.Contains("SuperAdmin"))
         {
             var success = await _storeService.UpdateAsync(id, dto);
-            return success ? Ok() : NotFound();
+            return success ? Ok(new { success = true, message = "Cập nhật cửa hàng thành công" })
+                           : NotFound(new { success = false, message = "Không tìm thấy cửa hàng" });
         }
+
         var token = Request.Headers["Authorization"]
             .ToString()
             .Replace("Bearer ", "");
@@ -241,10 +252,15 @@ public record CreateTrialStoreRequest(string StoreName, bool IsTrial = true);
         );
 
         if (!hasAccess)
-            return Forbid();
+        {
+            _logger.LogWarning("⚠️ Truy cập bị từ chối: User {Email} (Roles: {Roles}) cố cập nhật cửa hàng {StoreId}",
+                userEmail, rolesStr, id);
+            return StatusCode(403, new { success = false, message = "Bạn không có quyền cập nhật cửa hàng này" });
+        }
 
         var result = await _storeService.UpdateAsync(id, dto);
-        return result ? Ok() : NotFound();
+        return result ? Ok(new { success = true, message = "Cập nhật cửa hàng thành công" })
+                      : NotFound(new { success = false, message = "Không tìm thấy cửa hàng" });
     }
 
     // DELETE
@@ -252,14 +268,20 @@ public record CreateTrialStoreRequest(string StoreName, bool IsTrial = true);
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var userEmail = User.FindFirstValue(ClaimTypes.Email) ?? "unknown";
         var roles = User.FindAll(ClaimTypes.Role)
                         .Select(r => r.Value)
                         .ToList();
+        var rolesStr = string.Join(", ", roles);
+
+        _logger.LogInformation("Xóa cửa hàng: StoreId={StoreId}, User={Email}, Roles={Roles}",
+            id, userEmail, rolesStr);
 
         if (roles.Contains("SuperAdmin"))
         {
             var success = await _storeService.DeleteAsync(id);
-            return success ? Ok() : NotFound();
+            return success ? Ok(new { success = true, message = "Xóa cửa hàng thành công" })
+                           : NotFound(new { success = false, message = "Không tìm thấy cửa hàng" });
         }
 
         var token = Request.Headers["Authorization"]
@@ -273,9 +295,14 @@ public record CreateTrialStoreRequest(string StoreName, bool IsTrial = true);
         );
 
         if (!hasAccess)
-            return Forbid();
+        {
+            _logger.LogWarning("⚠️ Truy cập bị từ chối: User {Email} (Roles: {Roles}) cố xóa cửa hàng {StoreId}",
+                userEmail, rolesStr, id);
+            return StatusCode(403, new { success = false, message = "Bạn không có quyền xóa cửa hàng này" });
+        }
 
         var result = await _storeService.DeleteAsync(id);
-        return result ? Ok() : NotFound();
+        return result ? Ok(new { success = true, message = "Xóa cửa hàng thành công" })
+                      : NotFound(new { success = false, message = "Không tìm thấy cửa hàng" });
     }
 }

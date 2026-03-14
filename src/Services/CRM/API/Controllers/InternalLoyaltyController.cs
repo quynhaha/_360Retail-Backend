@@ -46,7 +46,7 @@ public class InternalLoyaltyController : ControllerBase
         catch (KeyNotFoundException)
         {
             _logger.LogWarning("Customer {CustomerId} not found for earn points", request.CustomerId);
-            return NotFound(new { success = false, message = "Customer not found" });
+            return NotFound(new { success = false, message = "Không tìm thấy khách hàng" });
         }
         catch (Exception ex)
         {
