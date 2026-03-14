@@ -131,6 +131,7 @@ public class TaskService : ITaskService
     {
         var query = _db.Tasks
             .Include(t => t.Assignee)
+            .Include(t => t.CreatedBy)
             .Where(t => t.StoreId == storeId);
 
         if (!includeInactive)
@@ -155,6 +156,7 @@ public class TaskService : ITaskService
 
         var query = _db.Tasks
             .Include(t => t.Assignee)
+            .Include(t => t.CreatedBy)
             .Where(t => t.StoreId == storeId && t.AssigneeId == employee.Id);
 
         if (!includeInactive)
@@ -172,6 +174,7 @@ public class TaskService : ITaskService
     {
         var task = await _db.Tasks
             .Include(t => t.Assignee)
+            .Include(t => t.CreatedBy)
             .FirstOrDefaultAsync(t => t.Id == taskId && t.StoreId == storeId);
 
         return task == null ? null : MapToDto(task, task.Assignee);
@@ -368,7 +371,9 @@ public class TaskService : ITaskService
             CreatedAt = task.CreatedAt,
             IsActive = task.IsActive,
             AssigneeName = assignee?.FullName,
-            AssigneePosition = assignee?.Position
+            AssigneePosition = assignee?.Position,
+            CreatedByEmployeeId = task.CreatedByEmployeeId,
+            CreatedByName = task.CreatedBy?.FullName
         };
     }
 

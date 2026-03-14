@@ -32,13 +32,13 @@ public class TimekeepingService : ITimekeepingService
         if (employee == null)
             throw new Exception("Không tìm thấy nhân viên trong cửa hàng này");
 
-        // 2. Check if already checked in today
-        var today = DateTime.UtcNow.Date;
+        // 2. Check if already checked in today (Vietnam time UTC+7)
+        var today = DateTime.UtcNow.AddHours(7).Date;
         var existingRecord = await _db.Timekeepings
             .FirstOrDefaultAsync(t => t.EmployeeId == employee.Id 
                                       && t.StoreId == storeId
                                       && t.CheckInTime.HasValue
-                                      && t.CheckInTime.Value.Date == today);
+                                      && t.CheckInTime.Value.AddHours(7).Date == today);
 
         if (existingRecord != null)
             throw new Exception("Bạn đã chấm công vào hôm nay rồi");
@@ -57,10 +57,11 @@ public class TimekeepingService : ITimekeepingService
             storeHasGps = coords?.Latitude != null && coords?.Longitude != null;
         }
 
-        // 4. Determine if late (after 9:00 AM local time — configurable)
+        // 4. Determine if late (after 9:00 AM Vietnam time = 2:00 AM UTC)
         var now = DateTime.UtcNow;
-        var lateThreshold = today.AddHours(9);
-        var isLate = now > lateThreshold;
+        var vnNow = now.AddHours(7); // Convert to Vietnam timezone (UTC+7)
+        var lateThreshold = vnNow.Date.AddHours(9); // 9:00 AM Vietnam
+        var isLate = vnNow > lateThreshold;
 
         // 5. Create timekeeping record
         var timekeeping = new Timekeeping

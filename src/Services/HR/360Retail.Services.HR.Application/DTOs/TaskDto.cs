@@ -19,4 +19,8 @@ public class TaskDto
     // Include employee info for display
     public string? AssigneeName { get; set; }
     public string? AssigneePosition { get; set; }
+    
+    // Creator info — để FE biết ai tạo task (ẩn/hiện nút Sửa cho Manager)
+    public Guid? CreatedByEmployeeId { get; set; }
+    public string? CreatedByName { get; set; }
 }
